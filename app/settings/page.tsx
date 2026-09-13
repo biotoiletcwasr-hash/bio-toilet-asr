@@ -3,6 +3,109 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import ThemeToggle from '@/components/ThemeToggle'
 
+type CPState = 'idle' | 'loading' | 'success' | 'error'
+
+function ChangePasswordCard() {
+  const [currentPw, setCurrentPw] = useState('')
+  const [newPw, setNewPw]         = useState('')
+  const [confirmPw, setConfirmPw] = useState('')
+  const [state, setState]         = useState<CPState>('idle')
+  const [message, setMessage]     = useState('')
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (newPw !== confirmPw) {
+      setState('error'); setMessage('New passwords do not match.'); return
+    }
+    if (newPw.length < 4) {
+      setState('error'); setMessage('Password must be at least 4 characters.'); return
+    }
+    setState('loading'); setMessage('')
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword: currentPw, newPassword: newPw }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed')
+      setState('success')
+      setMessage('Password changed successfully.')
+      setCurrentPw(''); setNewPw(''); setConfirmPw('')
+    } catch (err: any) {
+      setState('error'); setMessage(err.message || 'Something went wrong.')
+    }
+  }
+
+  const isSuccess = state === 'success'
+  const isError   = state === 'error'
+  const msgColor  = isSuccess ? 'var(--pass)' : 'var(--fail)'
+  const msgBg     = isSuccess ? 'var(--pass-bg)' : 'var(--fail-bg)'
+
+  return (
+    <div className="card" style={{ padding: '1.5rem' }}>
+      <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '.25rem' }}>Change Password</h3>
+      <p style={{ fontSize: '.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+        Update the admin login password. Default is <code style={{ color: 'var(--primary)', fontWeight: 700 }}>admin</code>.
+      </p>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '.75rem', maxWidth: '340px' }}>
+        <input
+          type="password"
+          className="input-field"
+          placeholder="Current password"
+          value={currentPw}
+          onChange={e => { setCurrentPw(e.target.value); setState('idle'); setMessage('') }}
+          required
+          autoComplete="current-password"
+        />
+        <input
+          type="password"
+          className="input-field"
+          placeholder="New password (min 4 chars)"
+          value={newPw}
+          onChange={e => { setNewPw(e.target.value); setState('idle'); setMessage('') }}
+          required
+          autoComplete="new-password"
+        />
+        <input
+          type="password"
+          className="input-field"
+          placeholder="Confirm new password"
+          value={confirmPw}
+          onChange={e => { setConfirmPw(e.target.value); setState('idle'); setMessage('') }}
+          required
+          autoComplete="new-password"
+        />
+        <button
+          type="submit"
+          disabled={state === 'loading'}
+          style={{
+            padding: '.45rem 1.25rem', borderRadius: '.375rem',
+            background: 'var(--primary)', color: 'var(--primary-fg)',
+            border: 'none', fontWeight: 600, fontSize: '.875rem',
+            cursor: state === 'loading' ? 'not-allowed' : 'pointer',
+            opacity: state === 'loading' ? .6 : 1,
+            width: 'fit-content',
+          }}
+        >
+          {state === 'loading' ? 'Saving…' : '🔐 Update Password'}
+        </button>
+      </form>
+      {message && (
+        <div style={{
+          marginTop: '.75rem', padding: '.6rem .9rem',
+          borderRadius: '.375rem', fontSize: '.8rem',
+          color: msgColor, background: msgBg,
+          border: `1px solid ${msgColor}`, fontWeight: 600,
+          maxWidth: '340px',
+        }}>
+          {isSuccess ? '✅ ' : '❌ '}{message}
+        </div>
+      )}
+    </div>
+  )
+}
+
 type UploadState = 'idle' | 'loading' | 'success' | 'error'
 
 function ClearEntriesCard() {
@@ -305,6 +408,17 @@ export default function SettingsPage() {
           <strong style={{ color: 'var(--text)' }}>Note:</strong>
           {' Result (PASS/FAIL) is read directly from the Excel Result column.'}
         </div>
+
+        <section>
+          <h2 style={{
+            fontSize: '.75rem', fontWeight: 700,
+            textTransform: 'uppercase', letterSpacing: '.08em',
+            color: 'var(--text-muted)', marginBottom: '.75rem',
+          }}>
+            Security
+          </h2>
+          <ChangePasswordCard />
+        </section>
 
         <section>
           <h2 style={{

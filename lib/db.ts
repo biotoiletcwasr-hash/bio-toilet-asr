@@ -57,6 +57,21 @@ export async function initDB() {
       uploaded_at TEXT DEFAULT (datetime('now','localtime'))
     )
   `)
+
+  // Auth: seed default admin/admin if not set
+  const pwRow = await db.execute(`SELECT value FROM meta WHERE key = 'pw_salt'`)
+  if (!pwRow.rows.length || !pwRow.rows[0].value) {
+    const salt = 'asr-cia-bio-default'
+    // SHA-256 of "asr-cia-bio-default:admin" — computed at runtime
+    const data = new TextEncoder().encode(salt + ':admin')
+    const hash = await globalThis.crypto.subtle.digest('SHA-256', data)
+    const hashHex = Array.from(new Uint8Array(hash))
+      .map(b => b.toString(16).padStart(2, '0')).join('')
+    await db.batch([
+      { sql: `INSERT OR IGNORE INTO meta (key, value) VALUES ('pw_salt', ?)`, args: [salt] },
+      { sql: `INSERT OR IGNORE INTO meta (key, value) VALUES ('pw_hash', ?)`, args: [hashHex] },
+    ])
+  }
 }
 
 export async function getNextSNo(): Promise<number> {

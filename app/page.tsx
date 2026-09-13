@@ -45,7 +45,7 @@ export default function Home() {
               </p>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem' }}>
             <Link
               href="/settings"
               style={{
@@ -59,6 +59,7 @@ export default function Home() {
             >
               ⚙️ Settings
             </Link>
+            <LogoutButton />
             <ThemeToggle />
           </div>
         </div>
@@ -132,6 +133,28 @@ export default function Home() {
         </a>
       </footer>
     </div>
+  )
+}
+
+function LogoutButton() {
+  async function handleLogout() {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    window.location.href = '/login'
+  }
+  return (
+    <button
+      onClick={handleLogout}
+      style={{
+        display: 'flex', alignItems: 'center', gap: '.35rem',
+        color: 'var(--header-fg)', background: 'none',
+        border: '1px solid color-mix(in srgb, var(--header-fg) 25%, transparent)',
+        fontSize: '.85rem', opacity: .8,
+        padding: '.35rem .65rem', borderRadius: '.375rem',
+        cursor: 'pointer', transition: 'opacity .15s',
+      }}
+    >
+      🚪 Logout
+    </button>
   )
 }
 
