@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import Link from 'next/link'
 import EntryForm from '@/components/EntryForm'
 import DataTable from '@/components/DataTable'
 import ThemeToggle from '@/components/ThemeToggle'
@@ -43,7 +44,22 @@ export default function Home() {
               </p>
             </div>
           </div>
-          <ThemeToggle />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <Link
+              href="/settings"
+              style={{
+                display: 'flex', alignItems: 'center', gap: '.35rem',
+                color: 'var(--header-fg)', textDecoration: 'none',
+                fontSize: '.85rem', opacity: .8,
+                padding: '.35rem .65rem', borderRadius: '.375rem',
+                border: '1px solid color-mix(in srgb, var(--header-fg) 25%, transparent)',
+                transition: 'opacity .15s',
+              }}
+            >
+              ⚙️ Settings
+            </Link>
+            <ThemeToggle />
+          </div>
         </div>
 
         {/* Tabs */}

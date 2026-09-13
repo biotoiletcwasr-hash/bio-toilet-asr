@@ -33,7 +33,7 @@ export default function DataTable({ refreshKey }: Props) {
   useEffect(() => { fetchEntries() }, [fetchEntries])
 
   async function handleDelete(id: number) {
-    if (!confirm('Is entry ko delete karna chahte hain?')) return
+    if (!confirm('Delete this entry? This cannot be undone.')) return
     setDeleting(id)
     await fetch(`/api/entries/${id}`, { method: 'DELETE' })
     setDeleting(null)
@@ -95,7 +95,7 @@ export default function DataTable({ refreshKey }: Props) {
           </div>
         ) : entries.length === 0 ? (
           <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-            Koi entry nahi mili 🔍
+            No entries found 🔍
           </div>
         ) : (
           <table className="data-table">

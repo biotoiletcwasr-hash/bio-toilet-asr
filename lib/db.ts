@@ -42,6 +42,21 @@ export async function initDB() {
   await db.execute(`
     INSERT OR IGNORE INTO meta (key, value) VALUES ('last_s_no', '0')
   `)
+
+  // Total Coaches table (replaced monthly via Settings upload)
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS total_coaches (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      coach_no    TEXT,
+      train_no    TEXT,
+      coach_type  TEXT,
+      depot       TEXT,
+      extra_1     TEXT,
+      extra_2     TEXT,
+      extra_3     TEXT,
+      uploaded_at TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `)
 }
 
 export async function getNextSNo(): Promise<number> {
