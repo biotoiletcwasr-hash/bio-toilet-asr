@@ -1,19 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db, initDB } from '@/lib/db'
-import * as XLSX from 'xlsx'
 
 function parseExcelDate(val: any): string | null {
   if (!val) return null
-  if (val instanceof Date) return val.toISOString().split('T')[0]
+  // ISO string from JSON serialization of Date (e.g. "2026-01-15T00:00:00.000Z")
   if (typeof val === 'string') {
     const s = val.trim()
     if (!s) return null
     if (s.toUpperCase() === 'NA') return 'NA'
+    // ISO datetime → extract date only
+    if (s.includes('T')) return s.split('T')[0]
+    // DD/MM/YYYY or DD-MM-YYYY
     const parts = s.split(/[-\/]/)
     if (parts.length === 3 && parts[0].length <= 2) {
       return `${parts[2].padStart(4, '20')}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`
     }
     return s
+  }
+  if (typeof val === 'number') {
+    // Excel serial number — convert manually
+    const date = new Date(Math.round((val - 25569) * 86400 * 1000))
+    const y = date.getUTCFullYear()
+    const m = String(date.getUTCMonth() + 1).padStart(2, '0')
+    const d = String(date.getUTCDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
   }
   return null
 }
@@ -51,22 +61,14 @@ export async function DELETE() {
   }
 }
 
+// POST: Receives pre-parsed rows from client-side Excel parsing
+// Body: { rows: any[][], sheetName: string }
 export async function POST(req: NextRequest) {
   try {
     await initDB()
-    const formData = await req.formData()
-    const file = formData.get('file') as File | null
-    if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
-
-    const buffer = Buffer.from(await file.arrayBuffer())
-    const workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true })
-
-    const sheetName =
-      workbook.SheetNames.find(n => n.includes('ASR') || n.includes('CIA') || n.includes('2026')) ||
-      workbook.SheetNames[0]
-
-    const ws = workbook.Sheets[sheetName]
-    const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true })
+    const body = await req.json()
+    const rows: any[][] = body.rows || []
+    const sheetName: string = body.sheetName || 'Unknown'
 
     const maxRes = await db.execute(`SELECT MAX(s_no) as max_s FROM bio_test_entries`)
     let currentMax = (maxRes.rows[0].max_s as number) || 0
@@ -74,6 +76,7 @@ export async function POST(req: NextRequest) {
     const statements: { sql: string; args: any[] }[] = []
     let skipped = 0
 
+    // Data starts at row index 3 (rows 0-2 are headers/metadata)
     for (let i = 3; i < rows.length; i++) {
       const row = rows[i]
       if (!row || row[0] == null) continue
@@ -111,9 +114,8 @@ export async function POST(req: NextRequest) {
     const CHUNK = 50
     let inserted = 0
     for (let i = 0; i < statements.length; i += CHUNK) {
-      const chunk = statements.slice(i, i + CHUNK)
-      await db.batch(chunk)
-      inserted += chunk.length
+      await db.batch(statements.slice(i, i + CHUNK))
+      inserted += Math.min(CHUNK, statements.length - i)
     }
 
     await db.execute({
