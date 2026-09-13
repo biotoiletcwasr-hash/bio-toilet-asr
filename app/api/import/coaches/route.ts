@@ -24,8 +24,8 @@ export async function POST(req: NextRequest) {
 
     // Build all statements: DELETE first, then all INSERTs
     // All sent in ONE db.batch() call = single Turso round-trip = no timeout
-    const allStatements: { sql: string; args?: any[] }[] = [
-      { sql: `DELETE FROM total_coaches` },
+    const allStatements: { sql: string; args: any[] }[] = [
+      { sql: `DELETE FROM total_coaches`, args: [] },
     ]
 
     let skipped = 0
