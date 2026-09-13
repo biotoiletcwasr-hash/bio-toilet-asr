@@ -39,6 +39,18 @@ function mapResult(val: any): string {
   return s.toUpperCase().includes('FAIL') ? 'FAIL' : 'PASS'
 }
 
+export async function DELETE() {
+  try {
+    await initDB()
+    await db.execute(`DELETE FROM bio_test_entries`)
+    await db.execute(`UPDATE meta SET value = '0' WHERE key = 'last_s_no'`)
+    return NextResponse.json({ success: true, message: 'All entries deleted' })
+  } catch (err: any) {
+    console.error(err)
+    return NextResponse.json({ error: err.message || 'Delete failed' }, { status: 500 })
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     await initDB()
