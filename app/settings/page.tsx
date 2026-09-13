@@ -83,12 +83,14 @@ function UploadCard({
   endpoint,
   accept,
   successMsg,
+  findSheet,
 }: {
   title: string
   description: string
   endpoint: string
   accept: string
   successMsg?: (data: any) => string
+  findSheet: (names: string[]) => string
 }) {
   const [state, setState] = useState<UploadState>('idle')
   const [message, setMessage] = useState('')
@@ -99,21 +101,28 @@ function UploadCard({
     setState('loading')
     setMessage('')
     try {
-      const fd = new FormData()
-      fd.append('file', file)
-      const res = await fetch(endpoint, { method: 'POST', body: fd })
+      // Parse Excel in the browser — avoids Vercel body size limits
+      const XLSX = await import('xlsx')
+      const arrayBuffer = await file.arrayBuffer()
+      const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: true })
+      const sheetName = findSheet(workbook.SheetNames)
+      const ws = workbook.Sheets[sheetName]
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, dateNF: 'yyyy-mm-dd' })
+
+      // Send extracted rows as JSON (tiny payload, no file upload)
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows, sheetName }),
+      })
       const rawText = await res.text()
       let data: any = {}
       try {
         data = JSON.parse(rawText)
       } catch {
-        const t = rawText.toLowerCase()
-        const hint = t.includes('timeout') || t.includes('gateway') || t.includes('504')
-          ? 'Request timed out. Try again.'
-          : rawText.slice(0, 300) || 'Unknown server error.'
-        throw new Error(hint)
+        throw new Error(rawText.slice(0, 300) || 'Server error')
       }
-      if (!res.ok) throw new Error(data.error || 'Upload failed')
+      if (!res.ok) throw new Error(data.error || 'Import failed')
       setState('success')
       setMessage(successMsg ? successMsg(data) : 'Import complete.')
     } catch (err: any) {
@@ -255,8 +264,9 @@ export default function SettingsPage() {
             title="Import Test Entries from Excel"
             description="Upload the Excel file containing the ASR and CIA 2026 sheet. All rows from row 4 onwards will be imported. Duplicate S.No entries are skipped automatically."
             endpoint="/api/import/entries"
-            accept=".xlsx,.xls"
+            accept=".xlsx,.xls,.xlsm"
             successMsg={(d) => `${d.inserted} entries imported from sheet "${d.sheetUsed}". ${d.skipped} rows skipped.`}
+            findSheet={(names) => names.find(n => n.includes('ASR') || n.includes('CIA') || n.includes('2026')) || names[0]}
           />
         </section>
 
@@ -272,8 +282,9 @@ export default function SettingsPage() {
             title="Update Coach List from Excel"
             description="Upload the current month's Excel file with the Total Coaches sheet. This completely replaces the existing coach list. Do this every month when the coach roster changes."
             endpoint="/api/import/coaches"
-            accept=".xlsx,.xls"
+            accept=".xlsx,.xls,.xlsm"
             successMsg={(d) => `${d.inserted} coaches loaded from sheet "${d.sheetUsed}".`}
+            findSheet={(names) => names.find(n => n.toLowerCase().includes('total') || n.toLowerCase().includes('coach')) || names[0]}
           />
           <CoachListStatus />
         </section>
