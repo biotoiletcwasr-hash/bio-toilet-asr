@@ -102,16 +102,17 @@ function UploadCard({
       const fd = new FormData()
       fd.append('file', file)
       const res = await fetch(endpoint, { method: 'POST', body: fd })
+      const rawText = await res.text()
       let data: any = {}
       try {
-        data = await res.json()
+        data = JSON.parse(rawText)
       } catch {
-        const text = await res.text().catch(() => '')
-        const hint = text.toLowerCase().includes('large') || text.toLowerCase().includes('entity')
-          ? 'File too large — try a smaller file (max ~4 MB).'
-          : text.toLowerCase().includes('timeout') || text.toLowerCase().includes('gateway')
+        const t = rawText.toLowerCase()
+        const hint = t.includes('large') || t.includes('entity')
+          ? 'File too large. Try a smaller file (max ~4 MB).'
+          : t.includes('timeout') || t.includes('gateway') || t.includes('504')
           ? 'Request timed out. Try again.'
-          : `Server error: ${text.slice(0, 120) || 'Unknown'}`
+          : rawText.slice(0, 200) || 'Unknown server error.'
         throw new Error(hint)
       }
       if (!res.ok) throw new Error(data.error || 'Upload failed')
