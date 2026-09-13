@@ -7,7 +7,8 @@ function parseExcelDate(val: any): string | null {
   if (val instanceof Date) return val.toISOString().split('T')[0]
   if (typeof val === 'string') {
     const s = val.trim()
-    if (!s || s.toUpperCase() === 'NA') return s.toUpperCase() === 'NA' ? 'NA' : null
+    if (!s) return null
+    if (s.toUpperCase() === 'NA') return 'NA'
     const parts = s.split(/[-\/]/)
     if (parts.length === 3 && parts[0].length <= 2) {
       return `${parts[2].padStart(4, '20')}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`
@@ -17,20 +18,15 @@ function parseExcelDate(val: any): string | null {
   return null
 }
 
-// Safely parse a number — handles "2.5X104", "6.8.", whitespace, etc.
 function safeNum(val: any): number | null {
   if (val == null) return null
   const s = String(val).trim()
   if (!s) return null
-
-  // Handle scientific notation written as "2.5X104" or "2.5x10^4"
   const sciMatch = s.match(/^([0-9.]+)[Xx]\s*10\^?\s*([0-9]+)$/)
   if (sciMatch) {
     const n = parseFloat(sciMatch[1]) * Math.pow(10, parseInt(sciMatch[2]))
     return isFinite(n) ? n : null
   }
-
-  // Strip trailing dots/spaces (e.g. "6.8.")
   const cleaned = s.replace(/\.+$/, '').trim()
   const n = parseFloat(cleaned)
   return isFinite(n) ? n : null
@@ -39,7 +35,7 @@ function safeNum(val: any): number | null {
 function mapResult(val: any): string {
   if (!val) return 'PASS'
   const s = String(val).trim()
-  if (!s || s === '  ') return 'PASS'
+  if (!s) return 'PASS'
   return s.toUpperCase().includes('FAIL') ? 'FAIL' : 'PASS'
 }
 
@@ -58,7 +54,7 @@ export async function POST(req: NextRequest) {
       workbook.SheetNames[0]
 
     const ws = workbook.Sheets[sheetName]
-    const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, cellDates: true })
+    const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true })
 
     const maxRes = await db.execute(`SELECT MAX(s_no) as max_s FROM bio_test_entries`)
     let currentMax = (maxRes.rows[0].max_s as number) || 0
@@ -79,12 +75,10 @@ export async function POST(req: NextRequest) {
       const trainNo   = row[2] != null ? String(row[2]).trim() : ''
       const code      = row[4] != null ? String(row[4]).trim() : ''
       const bioTankNo = row[5] != null ? String(row[5]).trim() : ''
-
-      const ph   = safeNum(row[6])
-      const cod  = safeNum(row[7])
-      const fcfc = safeNum(row[8])
-
-      const result       = mapResult(row[9])
+      const ph        = safeNum(row[6])
+      const cod       = safeNum(row[7])
+      const fcfc      = safeNum(row[8])
+      const result    = mapResult(row[9])
       const secondDate   = parseExcelDate(row[10]) || null
       const secondResult = row[11] != null && String(row[11]).trim() !== '' ? String(row[11]).trim() : null
 
@@ -102,7 +96,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ inserted: 0, skipped, sheetUsed: sheetName })
     }
 
-    // Batch in chunks of 50 to stay within Turso limits
     const CHUNK = 50
     let inserted = 0
     for (let i = 0; i < statements.length; i += CHUNK) {
