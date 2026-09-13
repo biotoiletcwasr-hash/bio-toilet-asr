@@ -143,7 +143,7 @@ export default function SettingsPage() {
             <span style={{ opacity: .4 }}>|</span>
             <div>
               <h1 style={{ fontSize: '1.1rem', fontWeight: 800 }}>⚙️ Settings</h1>
-              <p style={{ fontSize: '.7rem', opacity: .75 }}>Data import & configuration</p>
+              <p style={{ fontSize: '.7rem', opacity: .75 }}>Data import and configuration</p>
             </div>
           </div>
           <ThemeToggle />
@@ -172,8 +172,8 @@ export default function SettingsPage() {
             Monthly Coach List Update
           </h2>
           <UploadCard
-            title='Update Coach List — "Total Coaches" Sheet'
-            description='Upload the current month\'s Excel file with the "Total Coaches" sheet. This completely replaces the existing coach list. Use this every month when the coach roster changes.'
+            title="Update Coach List — Total Coaches Sheet"
+            description="Upload the current month's Excel file with the Total Coaches sheet. This completely replaces the existing coach list. Use this every month when the coach roster changes."
             endpoint="/api/import/coaches"
             accept=".xlsx,.xls"
             successMsg={(d) => `${d.inserted} coaches loaded from "${d.sheetUsed}" sheet.`}
