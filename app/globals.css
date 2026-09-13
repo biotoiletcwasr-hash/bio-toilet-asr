@@ -1,0 +1,188 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── CSS VARIABLE THEMES ─────────────────────────────────── */
+
+/* LIGHT (default) */
+:root {
+  --bg:          #f8fafc;
+  --bg-card:     #ffffff;
+  --bg-input:    #f1f5f9;
+  --border:      #e2e8f0;
+  --text:        #0f172a;
+  --text-muted:  #64748b;
+  --primary:     #1a56db;
+  --primary-fg:  #ffffff;
+  --pass:        #16a34a;
+  --pass-bg:     #dcfce7;
+  --fail:        #dc2626;
+  --fail-bg:     #fee2e2;
+  --pending:     #d97706;
+  --pending-bg:  #fef3c7;
+  --header-bg:   #1a56db;
+  --header-fg:   #ffffff;
+  --row-alt:     #f8fafc;
+  --shadow:      0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+}
+
+/* DARK */
+.dark {
+  --bg:          #0f172a;
+  --bg-card:     #1e293b;
+  --bg-input:    #334155;
+  --border:      #334155;
+  --text:        #f1f5f9;
+  --text-muted:  #94a3b8;
+  --primary:     #3b82f6;
+  --primary-fg:  #ffffff;
+  --pass:        #4ade80;
+  --pass-bg:     #14532d;
+  --fail:        #f87171;
+  --fail-bg:     #7f1d1d;
+  --pending:     #fbbf24;
+  --pending-bg:  #78350f;
+  --header-bg:   #1e293b;
+  --header-fg:   #f1f5f9;
+  --row-alt:     #1e293b;
+  --shadow:      0 1px 3px rgba(0,0,0,.4);
+}
+
+/* RAILWAY (Indian Railways – Navy & Gold) */
+.railway {
+  --bg:          #0a1628;
+  --bg-card:     #102040;
+  --bg-input:    #1a3050;
+  --border:      #1e4080;
+  --text:        #e8f0ff;
+  --text-muted:  #8aa0c0;
+  --primary:     #f6c90e;
+  --primary-fg:  #0a1628;
+  --pass:        #4ade80;
+  --pass-bg:     #0d3320;
+  --fail:        #f87171;
+  --fail-bg:     #3b0e0e;
+  --pending:     #fbbf24;
+  --pending-bg:  #3b2200;
+  --header-bg:   #0a1628;
+  --header-fg:   #f6c90e;
+  --row-alt:     #0e1e38;
+  --shadow:      0 1px 4px rgba(0,0,0,.5);
+}
+
+/* ─── BASE STYLES ─────────────────────────────────────────── */
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  transition: background-color .25s, color .25s;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: .75rem;
+  box-shadow: var(--shadow);
+}
+
+.input-field {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: .5rem;
+  padding: .5rem .75rem;
+  width: 100%;
+  font-size: .875rem;
+  transition: border-color .15s, box-shadow .15s;
+  outline: none;
+}
+
+.input-field:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: var(--primary-fg);
+  border: none;
+  border-radius: .5rem;
+  padding: .625rem 1.5rem;
+  font-size: .875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .15s, transform .1s;
+}
+
+.btn-primary:hover { opacity: .88; }
+.btn-primary:active { transform: scale(.98); }
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: .5rem;
+  padding: .5rem 1rem;
+  font-size: .875rem;
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.btn-ghost:hover { background: var(--bg-input); }
+
+/* ─── RESULT BADGES ───────────────────────────────────────── */
+.badge-pass    { background: var(--pass-bg);    color: var(--pass);    }
+.badge-fail    { background: var(--fail-bg);    color: var(--fail);    }
+.badge-pending { background: var(--pending-bg); color: var(--pending); }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .2rem .7rem;
+  border-radius: 9999px;
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+
+/* ─── TABLE ───────────────────────────────────────────────── */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .8125rem;
+}
+
+.data-table th {
+  background: var(--header-bg);
+  color: var(--header-fg);
+  padding: .65rem .9rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: .75rem;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.data-table th:first-child { border-radius: .5rem 0 0 0; }
+.data-table th:last-child  { border-radius: 0 .5rem 0 0; }
+
+.data-table td {
+  padding: .6rem .9rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: middle;
+}
+
+.data-table tr:nth-child(even) td { background: var(--row-alt); }
+.data-table tr:hover td { background: color-mix(in srgb, var(--primary) 6%, var(--bg-card)); }
+
+/* ─── SCROLLBAR ───────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ─── UTILITY ─────────────────────────────────────────────── */
+.limit-warn { color: var(--fail); font-size: .7rem; margin-top: .2rem; }
+.limit-ok   { color: var(--pass); font-size: .7rem; margin-top: .2rem; }
