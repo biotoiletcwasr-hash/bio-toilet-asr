@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
     // Fetch and return the created row
     const newRow = await db.execute({
       sql: `SELECT * FROM bio_test_entries WHERE id = ?`,
-      args: [res.lastInsertRowid],
+      args: [Number(res.lastInsertRowid ?? 0)],
     })
 
     return NextResponse.json({ entry: newRow.rows[0] }, { status: 201 })
