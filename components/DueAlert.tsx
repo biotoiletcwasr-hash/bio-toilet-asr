@@ -15,181 +15,171 @@ type DueData = {
   upcoming: CoachEntry[]
 }
 
-function formatDate(iso: string) {
+function fmtDate(iso: string) {
   const [y, m, d] = iso.split('-')
   return `${d}-${m}-${y}`
 }
 
 function CoachRow({ item, variant }: { item: CoachEntry; variant: 'overdue' | 'upcoming' }) {
   const color = variant === 'overdue' ? 'var(--fail)' : 'var(--pending)'
-  const bg = variant === 'overdue' ? 'var(--fail-bg)' : 'var(--pending-bg)'
-
+  const bg    = variant === 'overdue' ? 'var(--fail-bg)' : 'var(--pending-bg)'
   return (
     <div style={{
-      display: 'flex',
-      alignItems: 'center',
+      display: 'flex', alignItems: 'center',
       justifyContent: 'space-between',
-      padding: '.5rem .75rem',
-      borderRadius: '.375rem',
-      background: 'var(--bg)',
-      border: `1px solid var(--border)`,
-      gap: '.5rem',
-      flexWrap: 'wrap',
+      padding: '.5rem .75rem', borderRadius: '.375rem',
+      background: 'var(--bg)', border: '1px solid var(--border)',
+      gap: '.5rem', flexWrap: 'wrap',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', flexWrap: 'wrap' }}>
-        <span style={{
-          fontWeight: 700,
-          color: 'var(--text)',
-          fontSize: '.875rem',
-        }}>
+        <span style={{ fontWeight: 700, color: 'var(--text)', fontSize: '.875rem', fontFamily: 'monospace' }}>
           {item.coach_no}
         </span>
         <span style={{ fontSize: '.75rem', color: 'var(--text-muted)' }}>
-          Train {item.train_no} · Code {item.code}
+          Train {item.train_no || '—'} {item.code ? `· ${item.code}` : ''}
         </span>
       </div>
-      <span style={{
-        fontSize: '.75rem',
-        fontWeight: 600,
-        color,
-        background: bg,
-        padding: '.2rem .5rem',
-        borderRadius: '.25rem',
-        whiteSpace: 'nowrap',
-      }}>
-        Due: {formatDate(item.due_date)}
-      </span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '.7rem', color: 'var(--text-muted)' }}>
+          Tested: {fmtDate(item.test_date)}
+        </span>
+        <span style={{
+          fontSize: '.75rem', fontWeight: 600, color,
+          background: bg, padding: '.2rem .5rem', borderRadius: '.25rem', whiteSpace: 'nowrap',
+        }}>
+          Due: {fmtDate(item.due_date)}
+        </span>
+      </div>
     </div>
   )
 }
 
+type Tab = 'overdue' | 'upcoming'
+
 export default function DueAlert() {
-  const [data, setData] = useState<DueData | null>(null)
+  const [data, setData]     = useState<DueData | null>(null)
   const [collapsed, setCollapsed] = useState(false)
+  const [activeTab, setActiveTab] = useState<Tab>('overdue')
 
   useEffect(() => {
     fetch('/api/due-coaches')
       .then(r => r.json())
       .then(d => {
-        if (d.overdue || d.upcoming) setData(d)
+        if (d.overdue || d.upcoming) {
+          setData(d)
+          // default to whichever has items
+          if ((d.overdue?.length || 0) === 0 && (d.upcoming?.length || 0) > 0) {
+            setActiveTab('upcoming')
+          } else {
+            setActiveTab('overdue')
+          }
+        }
       })
       .catch(() => {})
   }, [])
 
   if (!data) return null
-  const total = data.overdue.length + data.upcoming.length
-  if (total === 0) return null
+  const hasOverdue  = data.overdue.length > 0
+  const hasUpcoming = data.upcoming.length > 0
+  if (!hasOverdue && !hasUpcoming) return null
+
+  const borderColor = hasOverdue ? 'var(--fail)' : 'var(--pending)'
+  const items = activeTab === 'overdue' ? data.overdue : data.upcoming
 
   return (
     <div style={{
-      border: `1.5px solid ${data.overdue.length > 0 ? 'var(--fail)' : 'var(--pending)'}`,
+      border: `1.5px solid ${borderColor}`,
       borderRadius: '.625rem',
       background: 'var(--bg-card)',
       marginBottom: '1.25rem',
       overflow: 'hidden',
       boxShadow: 'var(--shadow)',
     }}>
-      {/* Header */}
+      {/* Header row */}
       <div
         onClick={() => setCollapsed(c => !c)}
         style={{
-          display: 'flex',
-          alignItems: 'center',
+          display: 'flex', alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '.75rem 1rem',
-          cursor: 'pointer',
-          background: data.overdue.length > 0 ? 'var(--fail-bg)' : 'var(--pending-bg)',
-          gap: '.5rem',
-          flexWrap: 'wrap',
+          padding: '.65rem 1rem', cursor: 'pointer',
+          background: hasOverdue ? 'var(--fail-bg)' : 'var(--pending-bg)',
+          gap: '.5rem', flexWrap: 'wrap',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-          <span style={{ fontSize: '1.1rem' }}>
-            {data.overdue.length > 0 ? '🚨' : '⚠️'}
-          </span>
-          <span style={{
-            fontWeight: 700,
-            fontSize: '.9rem',
-            color: data.overdue.length > 0 ? 'var(--fail)' : 'var(--pending)',
-          }}>
+          <span style={{ fontSize: '1.1rem' }}>{hasOverdue ? '🚨' : '⚠️'}</span>
+          <span style={{ fontWeight: 700, fontSize: '.9rem', color: hasOverdue ? 'var(--fail)' : 'var(--pending)' }}>
             BIO TOILET RE-SAMPLING ALERT
           </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem' }}>
-          {data.overdue.length > 0 && (
-            <span style={{
-              fontSize: '.75rem', fontWeight: 700,
-              background: 'var(--fail)', color: '#fff',
-              padding: '.15rem .5rem', borderRadius: '999px',
-            }}>
-              {data.overdue.length} OVERDUE
-            </span>
-          )}
-          {data.upcoming.length > 0 && (
-            <span style={{
-              fontSize: '.75rem', fontWeight: 700,
-              background: 'var(--pending)', color: '#fff',
-              padding: '.15rem .5rem', borderRadius: '999px',
-            }}>
-              {data.upcoming.length} DUE IN 7 DAYS
-            </span>
-          )}
-          <span style={{ fontSize: '.8rem', color: 'var(--text-muted)' }}>
-            {collapsed ? '▼' : '▲'}
-          </span>
-        </div>
+        <span style={{ fontSize: '.8rem', color: 'var(--text-muted)' }}>
+          {collapsed ? '▼ Show' : '▲ Hide'}
+        </span>
       </div>
 
-      {/* Body */}
       {!collapsed && (
-        <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div style={{ padding: '1rem' }}>
+          {/* Toggle buttons */}
+          <div style={{ display: 'flex', gap: '.5rem', marginBottom: '1rem' }}>
+            <button
+              onClick={() => setActiveTab('overdue')}
+              disabled={!hasOverdue}
+              style={{
+                padding: '.4rem 1rem', borderRadius: '.375rem',
+                border: 'none', cursor: hasOverdue ? 'pointer' : 'not-allowed',
+                fontWeight: 700, fontSize: '.8rem',
+                background: activeTab === 'overdue' ? 'var(--fail)' : 'var(--bg)',
+                color: activeTab === 'overdue' ? '#fff' : hasOverdue ? 'var(--fail)' : 'var(--text-muted)',
+                outline: activeTab !== 'overdue' && hasOverdue ? '1.5px solid var(--fail)' : 'none',
+                opacity: !hasOverdue ? 0.5 : 1,
+                transition: 'all .15s',
+              }}
+            >
+              🔴 Overdue ({data.overdue.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('upcoming')}
+              disabled={!hasUpcoming}
+              style={{
+                padding: '.4rem 1rem', borderRadius: '.375rem',
+                border: 'none', cursor: hasUpcoming ? 'pointer' : 'not-allowed',
+                fontWeight: 700, fontSize: '.8rem',
+                background: activeTab === 'upcoming' ? 'var(--pending)' : 'var(--bg)',
+                color: activeTab === 'upcoming' ? '#fff' : hasUpcoming ? 'var(--pending)' : 'var(--text-muted)',
+                outline: activeTab !== 'upcoming' && hasUpcoming ? '1.5px solid var(--pending)' : 'none',
+                opacity: !hasUpcoming ? 0.5 : 1,
+                transition: 'all .15s',
+              }}
+            >
+              🟡 Due in 7 Days ({data.upcoming.length})
+            </button>
+          </div>
 
-          {data.overdue.length > 0 && (
-            <div>
-              <div style={{
-                fontSize: '.75rem', fontWeight: 700,
-                color: 'var(--fail)',
-                textTransform: 'uppercase', letterSpacing: '.06em',
-                marginBottom: '.5rem',
-                display: 'flex', alignItems: 'center', gap: '.35rem',
-              }}>
-                🔴 Overdue Coaches — {data.overdue.length}
-                <span style={{ fontWeight: 400, color: 'var(--text-muted)', textTransform: 'none', letterSpacing: 0 }}>
-                  (30-day window has passed — re-sample immediately)
-                </span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '.35rem' }}>
-                {data.overdue.map((item, i) => (
-                  <CoachRow key={i} item={item} variant="overdue" />
-                ))}
-              </div>
+          {/* List */}
+          {items.length === 0 ? (
+            <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '.85rem' }}>
+              No coaches in this category.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '.35rem' }}>
+              {activeTab === 'overdue' && (
+                <div style={{ fontSize: '.7rem', color: 'var(--fail)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '.25rem' }}>
+                  30-day window has passed — re-sample immediately · {items.length} coaches
+                </div>
+              )}
+              {activeTab === 'upcoming' && (
+                <div style={{ fontSize: '.7rem', color: 'var(--pending)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '.25rem' }}>
+                  Schedule re-sampling within 7 days · {items.length} coaches
+                </div>
+              )}
+              {items.map((item, i) => (
+                <CoachRow key={i} item={item} variant={activeTab} />
+              ))}
             </div>
           )}
 
-          {data.upcoming.length > 0 && (
-            <div>
-              <div style={{
-                fontSize: '.75rem', fontWeight: 700,
-                color: 'var(--pending)',
-                textTransform: 'uppercase', letterSpacing: '.06em',
-                marginBottom: '.5rem',
-                display: 'flex', alignItems: 'center', gap: '.35rem',
-              }}>
-                🟡 Due in Next 7 Days — {data.upcoming.length}
-                <span style={{ fontWeight: 400, color: 'var(--text-muted)', textTransform: 'none', letterSpacing: 0 }}>
-                  (schedule re-sampling soon)
-                </span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '.35rem' }}>
-                {data.upcoming.map((item, i) => (
-                  <CoachRow key={i} item={item} variant="upcoming" />
-                ))}
-              </div>
-            </div>
-          )}
-
-          <p style={{ fontSize: '.7rem', color: 'var(--text-muted)', margin: 0 }}>
-            Re-sampling due 30 days after the original FAIL test date. Mark the 2nd Test Date in the record to dismiss a coach from this list. Use &quot;NA&quot; in 2nd Test Result to exempt a coach permanently.
+          <p style={{ fontSize: '.7rem', color: 'var(--text-muted)', margin: '.75rem 0 0' }}>
+            Re-sampling due 30 days after FAIL test. Add 2nd Test Date in the record to dismiss. Use NA in 2nd Test Result to exempt permanently.
           </p>
         </div>
       )}

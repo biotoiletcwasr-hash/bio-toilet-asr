@@ -2,6 +2,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { BioTestEntry } from '@/lib/types'
 
+function fmtDate(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  const p = iso.split('-')
+  if (p.length === 3 && p[0].length === 4) return `${p[2]}-${p[1]}-${p[0]}`
+  return iso
+}
+
 interface Props {
   refreshKey: number
 }
@@ -120,7 +127,7 @@ export default function DataTable({ refreshKey }: Props) {
               {entries.map(e => (
                 <tr key={e.id}>
                   <td style={{ fontWeight: 700, color: 'var(--primary)' }}>{e.s_no}</td>
-                  <td style={{ whiteSpace: 'nowrap' }}>{e.date}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(e.date)}</td>
                   <td style={{ fontWeight: 600 }}>{e.train_no}</td>
                   <td>{e.coach_no}</td>
                   <td>{e.code || '—'}</td>
@@ -138,7 +145,7 @@ export default function DataTable({ refreshKey }: Props) {
                     <ResultBadge result={e.result} />
                   </td>
                   <td style={{ whiteSpace: 'nowrap', color: 'var(--text-muted)' }}>
-                    {e.second_test_date || '—'}
+                    {fmtDate(e.second_test_date)}
                   </td>
                   <td>
                     {e.second_test_result

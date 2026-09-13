@@ -5,10 +5,11 @@ import EntryForm from '@/components/EntryForm'
 import DataTable from '@/components/DataTable'
 import ThemeToggle from '@/components/ThemeToggle'
 import DueAlert from '@/components/DueAlert'
+import CoachSearch from '@/components/CoachSearch'
 
 export default function Home() {
   const [refreshKey, setRefreshKey] = useState(0)
-  const [activeTab, setActiveTab] = useState<'form' | 'records'>('form')
+  const [activeTab, setActiveTab] = useState<'form' | 'records' | 'search'>('form')
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
@@ -65,8 +66,9 @@ export default function Home() {
         {/* Tabs */}
         <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', gap: '0', borderTop: '1px solid color-mix(in srgb, var(--primary-fg) 20%, transparent)' }}>
           {[
-            { key: 'form',    label: '📝 New Entry'  },
-            { key: 'records', label: '📋 All Records' },
+            { key: 'form',    label: '📝 New Entry'    },
+            { key: 'records', label: '📋 All Records'  },
+            { key: 'search',  label: '🔍 Coach Lookup' },
           ].map(tab => (
             <button
               key={tab.key}
@@ -101,14 +103,17 @@ export default function Home() {
         {/* Stats bar */}
         <StatsBar />
 
-        {activeTab === 'form' ? (
+        {activeTab === 'form' && (
           <EntryForm onSuccess={() => {
             setRefreshKey(k => k + 1)
-            // Switch to records after save
             setTimeout(() => setActiveTab('records'), 800)
           }} />
-        ) : (
+        )}
+        {activeTab === 'records' && (
           <DataTable refreshKey={refreshKey} />
+        )}
+        {activeTab === 'search' && (
+          <CoachSearch />
         )}
       </main>
 
