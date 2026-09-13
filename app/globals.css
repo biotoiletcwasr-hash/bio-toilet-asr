@@ -48,27 +48,6 @@
   --shadow:      0 1px 3px rgba(0,0,0,.4);
 }
 
-/* RAILWAY (Indian Railways – Navy & Gold) */
-.railway {
-  --bg:          #0a1628;
-  --bg-card:     #102040;
-  --bg-input:    #1a3050;
-  --border:      #1e4080;
-  --text:        #e8f0ff;
-  --text-muted:  #8aa0c0;
-  --primary:     #f6c90e;
-  --primary-fg:  #0a1628;
-  --pass:        #4ade80;
-  --pass-bg:     #0d3320;
-  --fail:        #f87171;
-  --fail-bg:     #3b0e0e;
-  --pending:     #fbbf24;
-  --pending-bg:  #3b2200;
-  --header-bg:   #0a1628;
-  --header-fg:   #f6c90e;
-  --row-alt:     #0e1e38;
-  --shadow:      0 1px 4px rgba(0,0,0,.5);
-}
 
 /* ─── BASE STYLES ─────────────────────────────────────────── */
 body {

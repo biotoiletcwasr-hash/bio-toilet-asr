@@ -1,12 +1,11 @@
 'use client'
 import { useState, useEffect } from 'react'
 
-type Theme = 'light' | 'dark' | 'railway'
+type Theme = 'light' | 'dark'
 
 const THEMES: { key: Theme; label: string; icon: string }[] = [
-  { key: 'light',   label: 'Light',   icon: '☀️'  },
-  { key: 'dark',    label: 'Dark',    icon: '🌙'  },
-  { key: 'railway', label: 'Railway', icon: '🚂'  },
+  { key: 'light', label: 'Light', icon: '☀️' },
+  { key: 'dark',  label: 'Dark',  icon: '🌙' },
 ]
 
 export default function ThemeToggle() {

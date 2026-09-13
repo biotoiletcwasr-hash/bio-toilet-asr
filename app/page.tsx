@@ -3,6 +3,7 @@ import { useState } from 'react'
 import EntryForm from '@/components/EntryForm'
 import DataTable from '@/components/DataTable'
 import ThemeToggle from '@/components/ThemeToggle'
+import DueAlert from '@/components/DueAlert'
 
 export default function Home() {
   const [refreshKey, setRefreshKey] = useState(0)
@@ -78,6 +79,9 @@ export default function Home() {
 
       {/* Main content */}
       <main style={{ maxWidth: '1280px', margin: '0 auto', padding: '1.5rem' }}>
+        {/* Re-sampling due alert */}
+        <DueAlert />
+
         {/* Stats bar */}
         <StatsBar />
 
