@@ -58,7 +58,7 @@ type Tab = 'overdue' | 'upcoming'
 
 export default function DueAlert() {
   const [data, setData]     = useState<DueData | null>(null)
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(true)   // collapsed by default — user clicks Show
   const [activeTab, setActiveTab] = useState<Tab>('overdue')
 
   useEffect(() => {

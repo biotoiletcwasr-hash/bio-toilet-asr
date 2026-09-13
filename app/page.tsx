@@ -67,9 +67,9 @@ export default function Home() {
         {/* Tabs */}
         <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', gap: '0', borderTop: '1px solid color-mix(in srgb, var(--primary-fg) 20%, transparent)' }}>
           {[
-            { key: 'form',    label: '📝 New Entry'    },
-            { key: 'records', label: '📋 All Records'  },
-            { key: 'search',  label: '🔍 Coach Lookup' },
+            { key: 'form',    label: '📝 New Test Entry'       },
+            { key: 'records', label: '📋 All Records'          },
+            { key: 'search',  label: '🔍 Search Coach Status'  },
           ].map(tab => (
             <button
               key={tab.key}

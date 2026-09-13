@@ -2,28 +2,34 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { calculateResult } from '@/lib/types'
 
-// PUT - update an entry (mainly for 2nd test results)
+// PUT - update an entry (all editable fields)
 export async function PUT(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
     const body = await req.json()
-    const { second_test_date, second_test_result, ph, cod, fcfc } = body
+    const {
+      date, train_no, coach_no, code, bio_tank_no,
+      ph, cod, fcfc,
+      second_test_date, second_test_result,
+    } = body
 
-    const phVal = ph !== '' && ph !== null ? parseFloat(ph) : null
-    const codVal = cod !== '' && cod !== null ? parseFloat(cod) : null
-    const fcfcVal = fcfc !== '' && fcfc !== null ? parseFloat(fcfc) : null
-    const result = calculateResult(phVal, codVal, fcfcVal)
+    const phVal   = ph   !== '' && ph   != null ? parseFloat(ph)   : null
+    const codVal  = cod  !== '' && cod  != null ? parseFloat(cod)  : null
+    const fcfcVal = fcfc !== '' && fcfc != null ? parseFloat(fcfc) : null
+    const result  = calculateResult(phVal, codVal, fcfcVal)
 
     await db.execute({
       sql: `
         UPDATE bio_test_entries
-        SET ph = ?, cod = ?, fcfc = ?, result = ?,
+        SET date = ?, train_no = ?, coach_no = ?, code = ?, bio_tank_no = ?,
+            ph = ?, cod = ?, fcfc = ?, result = ?,
             second_test_date = ?, second_test_result = ?
         WHERE id = ?
       `,
       args: [
+        date || null, train_no || '', coach_no || '', code || '', bio_tank_no || '',
         phVal, codVal, fcfcVal, result,
         second_test_date || null,
         second_test_result || null,
