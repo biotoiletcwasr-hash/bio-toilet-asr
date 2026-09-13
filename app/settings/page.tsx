@@ -108,11 +108,9 @@ function UploadCard({
         data = JSON.parse(rawText)
       } catch {
         const t = rawText.toLowerCase()
-        const hint = t.includes('large') || t.includes('entity')
-          ? 'File too large. Try a smaller file (max ~4 MB).'
-          : t.includes('timeout') || t.includes('gateway') || t.includes('504')
+        const hint = t.includes('timeout') || t.includes('gateway') || t.includes('504')
           ? 'Request timed out. Try again.'
-          : rawText.slice(0, 200) || 'Unknown server error.'
+          : rawText.slice(0, 300) || 'Unknown server error.'
         throw new Error(hint)
       }
       if (!res.ok) throw new Error(data.error || 'Upload failed')

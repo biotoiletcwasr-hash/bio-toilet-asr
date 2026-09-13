@@ -50,10 +50,17 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    const inserted = allStatements.length - 1 // minus the DELETE statement
+    const insertStatements = allStatements.slice(1) // remove the DELETE
+    const inserted = insertStatements.length
 
-    if (inserted > 0) {
-      await db.batch(allStatements)
+    // DELETE first (separate call)
+    await db.execute(`DELETE FROM total_coaches`)
+
+    // Insert in chunks of 100 — avoids Turso batch payload limit
+    // while keeping round trips low enough to stay within Vercel 10s timeout
+    const CHUNK = 100
+    for (let i = 0; i < insertStatements.length; i += CHUNK) {
+      await db.batch(insertStatements.slice(i, i + CHUNK))
     }
 
     return NextResponse.json({ inserted, skipped, sheetUsed: sheetName })
