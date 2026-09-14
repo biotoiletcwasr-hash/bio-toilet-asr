@@ -27,7 +27,7 @@ export default function Home() {
           padding: '1rem 0',
           gap: '1rem', flexWrap: 'wrap',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem' }}>
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '.75rem', textDecoration: 'none', color: 'inherit' }}>
             <div style={{
               width: '42px', height: '42px',
               background: 'var(--primary)',
@@ -44,7 +44,7 @@ export default function Home() {
                 ASR & CIA Stations · Firozpur Division · 2026
               </p>
             </div>
-          </div>
+          </Link>
           <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem' }}>
             <Link
               href="/settings"
