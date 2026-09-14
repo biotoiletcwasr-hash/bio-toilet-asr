@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
     const coachNo = raw.toUpperCase()
     if (!coachNo) return NextResponse.json({ error: 'coach_no required' }, { status: 400 })
 
-    // 1. OVERDUE check: most recent entry must also be FAIL (not just any old FAIL)
+    // 1. OVERDUE check: ANY tank on the latest test date is FAIL without 2nd test
     const overdueRes = await db.execute({
       sql: `SELECT s_no, date, train_no, code, bio_tank_no,
                    date(date, '+30 days') as due_date,
@@ -19,8 +19,8 @@ export async function GET(req: NextRequest) {
               AND (second_test_date IS NULL OR second_test_date = '')
               AND (second_test_result IS NULL OR UPPER(second_test_result) != 'NA')
               AND date(date, '+30 days') < date('now','localtime')
-              AND s_no = (SELECT MAX(s_no) FROM bio_test_entries WHERE UPPER(coach_no) = ?)
-            ORDER BY date DESC LIMIT 1`,
+              AND date = (SELECT MAX(date) FROM bio_test_entries WHERE UPPER(coach_no) = ?)
+            ORDER BY s_no DESC LIMIT 1`,
       args: [coachNo, coachNo],
     })
 
