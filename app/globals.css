@@ -4,48 +4,52 @@
 
 /* ─── CSS VARIABLE THEMES ─────────────────────────────────── */
 
-/* LIGHT (default) */
+/* LIGHT (default) — Forest Green theme */
 :root {
-  --bg:          #f8fafc;
+  --bg:          #f0f7f1;
   --bg-card:     #ffffff;
-  --bg-input:    #f1f5f9;
-  --border:      #e2e8f0;
-  --text:        #0f172a;
-  --text-muted:  #64748b;
-  --primary:     #1a56db;
+  --bg-input:    #e8f5ea;
+  --border:      #c6dfc9;
+  --text:        #0d1f0f;
+  --text-muted:  #4a6b4e;
+  --primary:     #166534;
   --primary-fg:  #ffffff;
-  --pass:        #16a34a;
+  --primary-light: #dcfce7;
+  --pass:        #15803d;
   --pass-bg:     #dcfce7;
   --fail:        #dc2626;
   --fail-bg:     #fee2e2;
-  --pending:     #d97706;
+  --pending:     #b45309;
   --pending-bg:  #fef3c7;
-  --header-bg:   #1a56db;
+  --header-bg:   #14532d;
   --header-fg:   #ffffff;
-  --row-alt:     #f8fafc;
-  --shadow:      0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+  --row-alt:     #f0f7f1;
+  --shadow:      0 1px 3px rgba(22,101,52,.10),0 1px 2px rgba(22,101,52,.06);
+  --accent:      #4ade80;
 }
 
 /* DARK */
 .dark {
-  --bg:          #0f172a;
-  --bg-card:     #1e293b;
-  --bg-input:    #334155;
-  --border:      #334155;
-  --text:        #f1f5f9;
-  --text-muted:  #94a3b8;
-  --primary:     #3b82f6;
-  --primary-fg:  #ffffff;
+  --bg:          #0a1f0e;
+  --bg-card:     #112214;
+  --bg-input:    #1a3a1e;
+  --border:      #2d5c34;
+  --text:        #e8f5ea;
+  --text-muted:  #86b88c;
+  --primary:     #4ade80;
+  --primary-fg:  #0a1f0e;
+  --primary-light: #14532d;
   --pass:        #4ade80;
   --pass-bg:     #14532d;
   --fail:        #f87171;
   --fail-bg:     #7f1d1d;
   --pending:     #fbbf24;
   --pending-bg:  #78350f;
-  --header-bg:   #1e293b;
-  --header-fg:   #f1f5f9;
-  --row-alt:     #1e293b;
-  --shadow:      0 1px 3px rgba(0,0,0,.4);
+  --header-bg:   #112214;
+  --header-fg:   #e8f5ea;
+  --row-alt:     #112214;
+  --shadow:      0 1px 3px rgba(0,0,0,.5);
+  --accent:      #4ade80;
 }
 
 

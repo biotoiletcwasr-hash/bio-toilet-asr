@@ -28,8 +28,9 @@ type Remark = {
 type Tab = 'overdue' | 'upcoming'
 
 const LOCATION_OPTIONS = [
-  '', 'In Yard', 'On Terminal Train', 'In Workshop',
-  'Scheduled for Resampling', 'Not Located', 'Other'
+  'In Yard', 'On Terminal Train', 'In Workshop',
+  'Scheduled for Resampling', 'Not Located', 'Sent for Repairs',
+  'Out of Station', 'Other',
 ]
 
 function fmtDate(iso: string) {
@@ -84,7 +85,7 @@ function CoachRow({
       setAdding(false)
       setOpen(true)
     } catch {
-      alert('Remark save nahi hua. Try again.')
+      alert('Failed to save remark. Please try again.')
     } finally {
       setSaving(false)
     }
@@ -160,14 +161,18 @@ function CoachRow({
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '.65rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '.25rem', textTransform: 'uppercase' }}>Location / Status</label>
-                  <select className="input-field" style={{ fontSize: '.8rem' }}
+                  <input
+                    type="text"
+                    list="location-opts"
+                    className="input-field"
+                    style={{ fontSize: '.8rem' }}
+                    placeholder="Type or select location..."
                     value={addForm.location_status}
                     onChange={e => setAddForm(f => ({ ...f, location_status: e.target.value }))}
-                  >
-                    {LOCATION_OPTIONS.map(o => (
-                      <option key={o} value={o}>{o || '-- Select --'}</option>
-                    ))}
-                  </select>
+                  />
+                  <datalist id="location-opts">
+                    {LOCATION_OPTIONS.map(o => <option key={o} value={o} />)}
+                  </datalist>
                 </div>
               </div>
               <div style={{ marginBottom: '.65rem' }}>
@@ -298,7 +303,7 @@ export default function DueAlert() {
       const res = await fetch('/api/resampling-remarks')
       const d   = await res.json()
       const all: Remark[] = d.remarks || []
-      if (!all.length) { alert('Koi remarks nahi hain abhi.'); return }
+      if (!all.length) { alert('No remarks found.'); return }
 
       const headers = ['Coach No', 'Train No', 'Remark Date', 'Location / Status', 'Remark', 'Added At']
       const rows = all.map(r => [

@@ -35,8 +35,9 @@ type SearchResult = {
 }
 
 const LOCATION_OPTIONS = [
-  '', 'In Yard', 'On Terminal Train', 'In Workshop',
-  'Scheduled for Resampling', 'Not Located', 'Other'
+  'In Yard', 'On Terminal Train', 'In Workshop',
+  'Scheduled for Resampling', 'Not Located', 'Sent for Repairs',
+  'Out of Station', 'Other',
 ]
 
 function fmtDate(iso: string | null | undefined): string {
@@ -103,7 +104,7 @@ function ResamplingSection({ coachNo, trainNo, initialRemarks }: {
       setForm(f => ({ ...f, location_status: '', remark: '' }))
       setAdding(false)
     } catch {
-      alert('Remark save nahi hua.')
+      alert('Failed to save remark. Please try again.')
     } finally {
       setSaving(false)
     }
@@ -149,12 +150,18 @@ function ResamplingSection({ coachNo, trainNo, initialRemarks }: {
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '.65rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '.25rem', textTransform: 'uppercase' }}>Location / Status</label>
-                <select className="input-field" style={{ fontSize: '.8rem' }}
+                <input
+                  type="text"
+                  list="cs-location-opts"
+                  className="input-field"
+                  style={{ fontSize: '.8rem' }}
+                  placeholder="Type or select location..."
                   value={form.location_status}
                   onChange={e => setForm(f => ({ ...f, location_status: e.target.value }))}
-                >
-                  {LOCATION_OPTIONS.map(o => <option key={o} value={o}>{o || '-- Select --'}</option>)}
-                </select>
+                />
+                <datalist id="cs-location-opts">
+                  {LOCATION_OPTIONS.map(o => <option key={o} value={o} />)}
+                </datalist>
               </div>
             </div>
             <div style={{ marginBottom: '.65rem' }}>
