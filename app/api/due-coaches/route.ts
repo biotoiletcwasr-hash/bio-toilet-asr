@@ -21,8 +21,7 @@ export async function GET() {
             SELECT MAX(e2.date) FROM bio_test_entries e2
             WHERE UPPER(e2.coach_no) = UPPER(e.coach_no)
           )
-        GROUP BY UPPER(e.coach_no)
-        ORDER BY e.date ASC
+        ORDER BY e.date ASC, UPPER(e.coach_no), e.bio_tank_no
       `,
       args: [],
     })
