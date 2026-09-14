@@ -44,9 +44,10 @@ export async function POST(req: NextRequest) {
     })
 
     // Return the inserted row
+    const rowid = res.lastInsertRowid ?? BigInt(0)
     const inserted = await db.execute({
       sql: `SELECT * FROM resampling_remarks WHERE id = ?`,
-      args: [res.lastInsertRowid],
+      args: [rowid.toString()],
     })
 
     return NextResponse.json({ remark: inserted.rows[0], success: true })
