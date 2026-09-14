@@ -5,16 +5,20 @@ export async function GET() {
   try {
     await initDB()
 
-    // Get all FAILED entries where 2nd test hasn't been done
-    // and second_test_result is not 'NA' (exempt coaches)
+    // Only show coaches where their MOST RECENT entry (by s_no) is FAIL without 2nd test.
+    // This prevents old FAIL entries from showing up after a newer PASS has been recorded.
     const result = await db.execute({
       sql: `
-        SELECT coach_no, date, train_no, code, bio_tank_no
-        FROM bio_test_entries
-        WHERE result = 'FAIL'
-          AND (second_test_result IS NULL OR (UPPER(TRIM(second_test_result)) != 'NA'))
-          AND (second_test_date IS NULL OR second_test_date = '')
-        ORDER BY date ASC
+        SELECT e.coach_no, e.date, e.train_no, e.code, e.bio_tank_no
+        FROM bio_test_entries e
+        WHERE e.result = 'FAIL'
+          AND (e.second_test_result IS NULL OR UPPER(TRIM(e.second_test_result)) != 'NA')
+          AND (e.second_test_date IS NULL OR e.second_test_date = '')
+          AND e.s_no = (
+            SELECT MAX(s_no) FROM bio_test_entries e2
+            WHERE UPPER(e2.coach_no) = UPPER(e.coach_no)
+          )
+        ORDER BY e.date ASC
       `,
       args: [],
     })
@@ -37,10 +41,10 @@ export async function GET() {
       const entry = {
         coach_no: row.coach_no,
         train_no: row.train_no,
-        code: row.code,
+        code:     row.code,
         bio_tank_no: row.bio_tank_no,
         test_date: row.date,
-        due_date: dueDateStr,
+        due_date:  dueDateStr,
       }
 
       if (today >= dueDate) {

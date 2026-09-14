@@ -58,6 +58,19 @@ export async function initDB() {
     )
   `)
 
+  // Resampling Remarks — daily tracking for due coaches
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS resampling_remarks (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      coach_no        TEXT    NOT NULL,
+      train_no        TEXT    DEFAULT '',
+      remark_date     TEXT    NOT NULL,
+      location_status TEXT    DEFAULT '',
+      remark          TEXT    DEFAULT '',
+      created_at      TEXT    DEFAULT (datetime('now','localtime'))
+    )
+  `)
+
   // Auth: seed default admin/admin if not set
   const pwRow = await db.execute(`SELECT value FROM meta WHERE key = 'pw_salt'`)
   if (!pwRow.rows.length || !pwRow.rows[0].value) {
