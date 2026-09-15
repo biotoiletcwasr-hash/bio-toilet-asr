@@ -38,10 +38,10 @@ export default function Home() {
             }}>🚽</div>
             <div>
               <h1 style={{ fontSize: '1.1rem', fontWeight: 800, lineHeight: 1.2 }}>
-                Bio-Toilet Effluent Test
+                Bio Toilet Effluent Testing Lab
               </h1>
               <p style={{ fontSize: '.75rem', opacity: .75 }}>
-                ASR & CIA Stations · Firozpur Division · 2026
+                Coaching Depot ASR · Firozpur Division
               </p>
             </div>
           </Link>
@@ -169,8 +169,8 @@ function StatsBar() {
       {[
         { icon: '🔬', label: 'pH Limit',  value: '6 – 9',         sub: 'Acceptable range' },
         { icon: '💧', label: 'COD Limit', value: '<1800',          sub: 'mgO₂/L' },
-        { icon: '🦠', label: 'FCFC Limit',value: '<107',           sub: 'MPN/100ml' },
-        { icon: '📅', label: 'Year',       value: '2026',           sub: 'ASR & CIA · Firozpur Division' },
+        { icon: '🦠', label: 'FCFC Limit',value: '<10⁷',           sub: 'MPN/100ml' },
+        { icon: '📅', label: 'Year',       value: '2026',           sub: 'Coaching Depot ASR · Firozpur Division' },
       ].map(s => (
         <div key={s.label} className="card" style={{ padding: '1rem', textAlign: 'center' }}>
           <div style={{ fontSize: '1.5rem', marginBottom: '.25rem' }}>{s.icon}</div>

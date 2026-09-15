@@ -65,7 +65,7 @@ export default function EntryForm({ onSuccess }: Props) {
     e.preventDefault()
     setError('')
     if (!form.date || !form.train_no || !form.coach_no) {
-      setError('Date, Train No aur Coach No zaroori hain')
+      setError('Date, Train No and Coach No are required.')
       return
     }
     setLoading(true)
@@ -95,7 +95,7 @@ export default function EntryForm({ onSuccess }: Props) {
         onSuccess()        // refresh data table (without switching tab)
       }
     } catch {
-      setError('Entry save nahi hui. Dobara try karein.')
+      setError('Failed to save entry. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -260,7 +260,7 @@ export default function EntryForm({ onSuccess }: Props) {
         <Field label="Train No." required>
           <input
             type="text" className="input-field"
-            placeholder="e.g. 12031"
+            placeholder=""
             value={form.train_no}
             onChange={e => update('train_no', e.target.value.toUpperCase())}
             required
@@ -270,7 +270,7 @@ export default function EntryForm({ onSuccess }: Props) {
         <Field label="Coach No." required>
           <input
             type="text" className="input-field"
-            placeholder="e.g. B1, S2"
+            placeholder=""
             value={form.coach_no}
             onChange={e => update('coach_no', e.target.value.toUpperCase())}
             required
@@ -280,7 +280,7 @@ export default function EntryForm({ onSuccess }: Props) {
         <Field label="Code">
           <input
             type="text" className="input-field"
-            placeholder="e.g. ASR"
+            placeholder=""
             value={form.code}
             onChange={e => update('code', e.target.value.toUpperCase())}
           />
@@ -289,7 +289,7 @@ export default function EntryForm({ onSuccess }: Props) {
         <Field label="Bio Tank No.">
           <input
             type="text" className="input-field"
-            placeholder="e.g. T-1"
+            placeholder=""
             value={form.bio_tank_no}
             onChange={e => update('bio_tank_no', e.target.value)}
           />
@@ -312,7 +312,7 @@ export default function EntryForm({ onSuccess }: Props) {
           <Field label="pH (Limit: 6–9)">
             <input
               type="number" step="0.1" min="0" max="14"
-              className="input-field" placeholder="e.g. 7.5"
+              className="input-field" placeholder=""
               value={form.ph}
               onChange={e => update('ph', e.target.value)}
             />
@@ -326,7 +326,7 @@ export default function EntryForm({ onSuccess }: Props) {
           <Field label="COD (Limit: <1800 mgO₂/L)">
             <input
               type="number" step="0.1" min="0"
-              className="input-field" placeholder="e.g. 350"
+              className="input-field" placeholder=""
               value={form.cod}
               onChange={e => update('cod', e.target.value)}
             />
@@ -337,16 +337,16 @@ export default function EntryForm({ onSuccess }: Props) {
             )}
           </Field>
 
-          <Field label="FCFC (Limit: <107 MPN/100ml)">
+          <Field label="FCFC (Limit: <10⁷ MPN/100ml)">
             <input
               type="number" step="0.1" min="0"
-              className="input-field" placeholder="e.g. 45"
+              className="input-field" placeholder=""
               value={form.fcfc}
               onChange={e => update('fcfc', e.target.value)}
             />
             {form.fcfc !== '' && (
-              <p className={fcfc < 107 ? 'limit-ok' : 'limit-warn'}>
-                {fcfc < 107 ? '✓ Within limit' : '⚠ Exceeds 107'}
+              <p className={fcfc < 10000000 ? 'limit-ok' : 'limit-warn'}>
+                {fcfc < 10000000 ? '✓ Within limit' : '⚠ Exceeds 10⁷'}
               </p>
             )}
           </Field>
