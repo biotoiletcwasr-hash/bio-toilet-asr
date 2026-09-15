@@ -54,7 +54,7 @@ function EditModal({ entry, onClose, onSaved }: {
 
   async function handleSave() {
     if (!form.date || !form.train_no || !form.coach_no) {
-      setError('Date, Train No aur Coach No zaroori hain')
+      setError('Date, Train No and Coach No are required.')
       return
     }
     setLoading(true); setError('')
@@ -67,7 +67,7 @@ function EditModal({ entry, onClose, onSaved }: {
       if (!res.ok) throw new Error('Server error')
       onSaved(); onClose()
     } catch {
-      setError('Update failed. Dobara try karein.')
+      setError('Update failed. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -130,7 +130,7 @@ function EditModal({ entry, onClose, onSaved }: {
             {[
               { k: 'ph',   label: 'pH (6–9)',    check: (v: number) => v >= 6 && v <= 9 },
               { k: 'cod',  label: 'COD (<1800)', check: (v: number) => v < 1800 },
-              { k: 'fcfc', label: 'FCFC (<107)', check: (v: number) => v < 107  },
+              { k: 'fcfc', label: 'FCFC (<10⁷)', check: (v: number) => v < 10000000 },
             ].map(f => {
               const val = parseFloat((form as any)[f.k])
               const ok  = !isNaN(val) && f.check(val)
@@ -301,7 +301,7 @@ export default function DataTable({ refreshKey }: Props) {
                     <td>{e.bio_tank_no || '—'}</td>
                     <td><PHBadge val={e.ph} /></td>
                     <td><NumBadge val={e.cod} max={1800} unit="" /></td>
-                    <td><NumBadge val={e.fcfc} max={107} unit="" /></td>
+                    <td><NumBadge val={e.fcfc} max={10000000} unit="" /></td>
                     <td><ResultBadge result={e.result} /></td>
                     <td style={{ whiteSpace: 'nowrap', color: 'var(--text-muted)' }}>{fmtDate(e.second_test_date)}</td>
                     <td>
