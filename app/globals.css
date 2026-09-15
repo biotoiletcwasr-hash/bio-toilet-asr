@@ -10,6 +10,7 @@
   --bg-card:     #ffffff;
   --bg-input:    #f1f5f9;
   --border:      #e2e8f0;
+  --border-strong: #94a3b8;
   --text:        #0f172a;
   --text-muted:  #64748b;
   --primary:     #1a56db;
@@ -32,6 +33,7 @@
   --bg-card:     #1e293b;
   --bg-input:    #334155;
   --border:      #334155;
+  --border-strong: #64748b;
   --text:        #f1f5f9;
   --text-muted:  #94a3b8;
   --primary:     #3b82f6;
@@ -66,7 +68,7 @@ body {
 
 .input-field {
   background: var(--bg-input);
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border-strong);
   color: var(--text);
   border-radius: .5rem;
   padding: .5rem .75rem;
