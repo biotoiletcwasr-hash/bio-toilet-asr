@@ -34,7 +34,7 @@ export interface FormEntry {
 export const LIMITS = {
   ph: { min: 6, max: 9 },
   cod: { max: 1800 },
-  fcfc: { max: 107 },
+  fcfc: { max: 10000000 },
 } as const
 
 export function calculateResult(

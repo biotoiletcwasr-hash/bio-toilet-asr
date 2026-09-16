@@ -109,7 +109,6 @@ export default function Home() {
         {activeTab === 'form' && (
           <EntryForm onSuccess={() => {
             setRefreshKey(k => k + 1)
-            setTimeout(() => setActiveTab('records'), 800)
           }} />
         )}
         {activeTab === 'records' && (
