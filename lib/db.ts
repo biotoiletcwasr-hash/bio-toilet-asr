@@ -58,6 +58,18 @@ export async function initDB() {
     )
   `)
 
+  // Migrate: add depot column if missing (safe to run every time)
+  try {
+    await db.execute(`ALTER TABLE bio_test_entries ADD COLUMN depot TEXT DEFAULT 'ASR'`)
+  } catch { /* column already exists */ }
+
+  // Backfill: set depot='ASR' for all existing rows where depot is NULL
+  // (Turso/libsql does not physical-backfill ALTER TABLE defaults)
+  await db.execute(`UPDATE bio_test_entries SET depot = 'ASR' WHERE depot IS NULL`)
+
+  // Backfill: set depot='ASR' for total_coaches rows where depot is NULL/empty
+  await db.execute(`UPDATE total_coaches SET depot = 'ASR' WHERE depot IS NULL OR TRIM(depot) = ''`)
+
   // Resampling Remarks — daily tracking for due coaches
   await db.execute(`
     CREATE TABLE IF NOT EXISTS resampling_remarks (

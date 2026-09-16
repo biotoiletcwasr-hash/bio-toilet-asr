@@ -21,6 +21,12 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<'form' | 'records' | 'search' | '90days'>('form')
   const [selectedDepot, setSelectedDepot] = useState<Depot>('ASR')
 
+  function switchDepot(d: Depot) {
+    setSelectedDepot(d)
+    // 90days tab is ASR-only — reset to form if switching away from ASR
+    if (d !== 'ASR' && activeTab === '90days') setActiveTab('form')
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       {/* Header */}
@@ -77,11 +83,11 @@ export default function Home() {
         {/* Tabs */}
         <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', gap: '0', borderTop: '1px solid color-mix(in srgb, var(--primary-fg) 20%, transparent)' }}>
           {[
-            { key: 'form',    label: '📝 New Test Entry'       },
-            { key: 'records', label: '📋 All Records'          },
-            { key: 'search',  label: '🔍 Search Coach Status'  },
-            { key: '90days',  label: '⏰ Coaches > 90 Days'    },
-          ].map(tab => (
+            { key: 'form',    label: '📝 New Test Entry',      always: true  },
+            { key: 'records', label: '📋 All Records',         always: true  },
+            { key: 'search',  label: '🔍 Search Coach Status', always: true  },
+            { key: '90days',  label: '⏰ Coaches > 90 Days',   always: false },
+          ].filter(tab => tab.always || selectedDepot === 'ASR').map(tab => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key as any)}
@@ -124,7 +130,7 @@ export default function Home() {
           {(['ASR', 'FZR', 'JUC'] as Depot[]).map(d => (
             <button
               key={d}
-              onClick={() => setSelectedDepot(d)}
+              onClick={() => switchDepot(d)}
               style={{
                 padding: '.45rem 1.25rem',
                 borderRadius: '.5rem',
@@ -146,8 +152,8 @@ export default function Home() {
           </span>
         </div>
 
-        {/* Re-sampling due alert */}
-        <DueAlert depot={selectedDepot} />
+        {/* Re-sampling due alert — ASR only */}
+        {selectedDepot === 'ASR' && <DueAlert depot={selectedDepot} />}
 
         {/* Stats bar */}
         <StatsBar />
