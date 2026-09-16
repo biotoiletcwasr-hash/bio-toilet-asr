@@ -8,18 +8,23 @@ export async function GET(req: NextRequest) {
     const coachNo = raw.toUpperCase()
     if (!coachNo) return NextResponse.json({ error: 'coach_no required' }, { status: 400 })
 
-    const depotParam = req.nextUrl.searchParams.get('depot')?.trim().toUpperCase() || ''
-    // Build depot clause: if depot provided, filter strictly by it;
-    // for ASR also match legacy NULL rows (pre-backfill safety net)
-    const depotClause = depotParam
-      ? depotParam === 'ASR'
-        ? `AND (UPPER(depot) = 'ASR' OR depot IS NULL)`
-        : `AND UPPER(depot) = '${depotParam}'`
-      : ''
-    const depotArgs = (q: string[], ...extras: string[]) =>
-      depotParam ? [...q, ...extras] : [...q, ...extras]
+    const rawDepot = req.nextUrl.searchParams.get('depot')?.trim().toUpperCase() || ''
+    // Validate depot to prevent injection
+    const depotParam = ['ASR', 'FZR', 'JUC'].includes(rawDepot) ? rawDepot : ''
 
-    // 1. OVERDUE check: ANY tank on the latest test date is FAIL without 2nd test
+    // For ASR: also match legacy NULL rows (pre-backfill safety net); hardcoded constant, safe
+    // For FZR/JUC: parameterized via args
+    const isASR = depotParam === 'ASR'
+    const isFZRorJUC = depotParam === 'FZR' || depotParam === 'JUC'
+
+    // ASR clause hardcoded (constant), FZR/JUC use ? placeholder
+    const depotSQL  = isASR    ? `AND (UPPER(depot) = 'ASR' OR depot IS NULL)`
+                    : isFZRorJUC ? `AND UPPER(depot) = ?`
+                    : ''
+    // Extra args to append when depot clause is parameterized
+    const dArg = isFZRorJUC ? [depotParam] : []
+
+    // 1. OVERDUE check — depot-filtered
     const overdueRes = await db.execute({
       sql: `SELECT s_no, date, train_no, code, bio_tank_no,
                    date(date, '+30 days') as due_date,
@@ -30,10 +35,13 @@ export async function GET(req: NextRequest) {
               AND (second_test_date IS NULL OR second_test_date = '')
               AND (second_test_result IS NULL OR UPPER(second_test_result) != 'NA')
               AND date(date, '+30 days') < date('now','localtime')
-              ${depotClause}
-              AND date = (SELECT MAX(date) FROM bio_test_entries WHERE UPPER(coach_no) = ? ${depotClause})
+              ${depotSQL}
+              AND date = (
+                SELECT MAX(date) FROM bio_test_entries
+                WHERE UPPER(coach_no) = ? ${depotSQL}
+              )
             ORDER BY s_no DESC LIMIT 1`,
-      args: [coachNo, coachNo],
+      args: [coachNo, ...dArg, coachNo, ...dArg],
     })
 
     // 2. Coach master info from total_coaches (ASR master list — shown for any depot search)
@@ -50,23 +58,23 @@ export async function GET(req: NextRequest) {
                    CAST(julianday('now','localtime') - julianday(date) AS INTEGER) as days_ago
             FROM bio_test_entries
             WHERE UPPER(coach_no) = ?
-            ${depotClause}
+            ${depotSQL}
             ORDER BY date DESC, s_no DESC LIMIT 1`,
-      args: [coachNo],
+      args: [coachNo, ...dArg],
     })
 
-    // 4. All test history for this coach, filtered by depot
+    // 4. Full test history, filtered by depot
     const historyRes = await db.execute({
       sql: `SELECT s_no, date, train_no, result, second_test_date, second_test_result,
                    CAST(julianday('now','localtime') - julianday(date) AS INTEGER) as days_ago
             FROM bio_test_entries
             WHERE UPPER(coach_no) = ?
-            ${depotClause}
+            ${depotSQL}
             ORDER BY date DESC, s_no DESC`,
-      args: [coachNo],
+      args: [coachNo, ...dArg],
     })
 
-    // 5. Resampling remarks for this coach
+    // 5. Resampling remarks (not depot-scoped — shared tracking across depots)
     const remarksRes = await db.execute({
       sql: `SELECT id, remark_date, location_status, remark, created_at
             FROM resampling_remarks WHERE UPPER(coach_no) = ?
@@ -86,13 +94,11 @@ export async function GET(req: NextRequest) {
     } else if (!lastTest) {
       status = master ? 'PENDING' : 'NOT_IN_LIST'
     } else {
-      const daysAgo = lastTest.days_ago as number
       const lastResult = lastTest.result as string
-      // Check if latest entry is FAIL with 2nd test pending but not yet 30 days
       if (lastResult === 'FAIL' && !lastTest.second_test_date) {
-        status = 'PENDING'  // FAIL but within 30-day window
+        status = 'PENDING'
       } else {
-        status = daysAgo > 90 ? 'PENDING' : 'TESTED'
+        status = (lastTest.days_ago as number) > 90 ? 'PENDING' : 'TESTED'
       }
     }
 

@@ -10,23 +10,27 @@ export async function GET(req: NextRequest) {
     const page = parseInt(url.searchParams.get('page') || '1')
     const limit = parseInt(url.searchParams.get('limit') || '20')
     const search = url.searchParams.get('search') || ''
+    const depot  = url.searchParams.get('depot')  || ''
     const offset = (page - 1) * limit
 
-    let query = `
-      SELECT * FROM bio_test_entries
-      WHERE train_no LIKE ? OR coach_no LIKE ? OR code LIKE ?
-      ORDER BY s_no DESC
-      LIMIT ? OFFSET ?
-    `
     const searchParam = `%${search}%`
+    const depotFilter = depot ? `AND UPPER(depot) = UPPER(?)` : ''
+    const baseArgs    = depot
+      ? [searchParam, searchParam, searchParam, depot]
+      : [searchParam, searchParam, searchParam]
+
     const result = await db.execute({
-      sql: query,
-      args: [searchParam, searchParam, searchParam, limit, offset],
+      sql: `SELECT * FROM bio_test_entries
+            WHERE (train_no LIKE ? OR coach_no LIKE ? OR code LIKE ?)
+            ${depotFilter}
+            ORDER BY s_no DESC LIMIT ? OFFSET ?`,
+      args: [...baseArgs, limit, offset],
     })
 
     const countResult = await db.execute({
-      sql: `SELECT COUNT(*) as total FROM bio_test_entries WHERE train_no LIKE ? OR coach_no LIKE ? OR code LIKE ?`,
-      args: [searchParam, searchParam, searchParam],
+      sql: `SELECT COUNT(*) as total FROM bio_test_entries
+            WHERE (train_no LIKE ? OR coach_no LIKE ? OR code LIKE ?) ${depotFilter}`,
+      args: baseArgs,
     })
 
     return NextResponse.json({
@@ -50,6 +54,7 @@ export async function POST(req: NextRequest) {
       date, train_no, coach_no, code, bio_tank_no,
       ph, cod, fcfc,
       second_test_date, second_test_result,
+      depot,
     } = body
 
     const phVal = ph !== '' && ph !== null ? parseFloat(ph) : null
@@ -62,14 +67,15 @@ export async function POST(req: NextRequest) {
     const res = await db.execute({
       sql: `
         INSERT INTO bio_test_entries
-          (s_no, date, train_no, coach_no, code, bio_tank_no, ph, cod, fcfc, result, second_test_date, second_test_result)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          (s_no, date, train_no, coach_no, code, bio_tank_no, ph, cod, fcfc, result, second_test_date, second_test_result, depot)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       args: [
         sNo, date, train_no, coach_no, code, bio_tank_no,
         phVal, codVal, fcfcVal, result,
         second_test_date || null,
         second_test_result || null,
+        depot || 'ASR',
       ],
     })
 
