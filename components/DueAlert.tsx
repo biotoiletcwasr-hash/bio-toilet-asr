@@ -240,7 +240,7 @@ function CoachRow({
 }
 
 // ── Main DueAlert ─────────────────────────────────────────────
-export default function DueAlert() {
+export default function DueAlert({ depot }: { depot: string }) {
   const [data, setData]         = useState<DueData | null>(null)
   const [collapsed, setCollapsed] = useState(true)
   const [activeTab, setActiveTab] = useState<Tab>('overdue')
@@ -249,7 +249,11 @@ export default function DueAlert() {
   const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
-    fetch('/api/due-coaches')
+    setData(null)
+    setCollapsed(true)
+    setRemarksLoaded(false)
+    setRemarks({})
+    fetch(`/api/due-coaches?depot=${encodeURIComponent(depot)}`)
       .then(r => r.json())
       .then(d => {
         if (d.overdue || d.upcoming) {
@@ -260,7 +264,7 @@ export default function DueAlert() {
         }
       })
       .catch(() => {})
-  }, [])
+  }, [depot])
 
   // Load all remarks when expanded
   useEffect(() => {

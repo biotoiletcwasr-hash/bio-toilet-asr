@@ -11,6 +11,7 @@ function fmtDate(iso: string | null | undefined): string {
 
 interface Props {
   refreshKey: number
+  depot: string
 }
 
 // ── Edit Modal ────────────────────────────────────────────────
@@ -191,7 +192,7 @@ function EditModal({ entry, onClose, onSaved }: {
 }
 
 // ── Main DataTable ────────────────────────────────────────────
-export default function DataTable({ refreshKey }: Props) {
+export default function DataTable({ refreshKey, depot }: Props) {
   const [entries, setEntries] = useState<BioTestEntry[]>([])
   const [total, setTotal]     = useState(0)
   const [page, setPage]       = useState(1)
@@ -206,7 +207,7 @@ export default function DataTable({ refreshKey }: Props) {
     setLoading(true)
     try {
       const res = await fetch(
-        `/api/entries?page=${page}&limit=${LIMIT}&search=${encodeURIComponent(search)}`
+        `/api/entries?page=${page}&limit=${LIMIT}&search=${encodeURIComponent(search)}&depot=${encodeURIComponent(depot)}`
       )
       const data = await res.json()
       setEntries(data.entries || [])
@@ -214,8 +215,9 @@ export default function DataTable({ refreshKey }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [page, search, refreshKey])
+  }, [page, search, refreshKey, depot])
 
+  useEffect(() => { setPage(1) }, [depot])
   useEffect(() => { fetchEntries() }, [fetchEntries])
 
   async function handleDelete(id: number) {

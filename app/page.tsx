@@ -8,9 +8,18 @@ import DueAlert from '@/components/DueAlert'
 import CoachSearch from '@/components/CoachSearch'
 import Coaches90Days from '@/components/Coaches90Days'
 
+type Depot = 'ASR' | 'FZR' | 'JUC'
+
+const DEPOT_LABELS: Record<Depot, string> = {
+  ASR: 'ASR — Amritsar',
+  FZR: 'FZR — Firozpur',
+  JUC: 'JUC — Jalandhar',
+}
+
 export default function Home() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [activeTab, setActiveTab] = useState<'form' | 'records' | 'search' | '90days'>('form')
+  const [selectedDepot, setSelectedDepot] = useState<Depot>('ASR')
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
@@ -100,25 +109,62 @@ export default function Home() {
 
       {/* Main content */}
       <main style={{ maxWidth: '1280px', margin: '0 auto', padding: '1.5rem' }}>
+
+        {/* ── Depot Switcher ── */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '.75rem',
+          padding: '.75rem 1rem', borderRadius: '.625rem',
+          background: 'var(--bg-card)', border: '1.5px solid var(--primary)',
+          marginBottom: '1.25rem', flexWrap: 'wrap',
+          boxShadow: 'var(--shadow)',
+        }}>
+          <span style={{ fontSize: '.8rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.06em', flexShrink: 0 }}>
+            🏭 Depot:
+          </span>
+          {(['ASR', 'FZR', 'JUC'] as Depot[]).map(d => (
+            <button
+              key={d}
+              onClick={() => setSelectedDepot(d)}
+              style={{
+                padding: '.45rem 1.25rem',
+                borderRadius: '.5rem',
+                border: selectedDepot === d ? 'none' : '1.5px solid var(--border)',
+                background: selectedDepot === d ? 'var(--primary)' : 'transparent',
+                color: selectedDepot === d ? '#fff' : 'var(--text)',
+                fontWeight: 700,
+                fontSize: '.875rem',
+                cursor: 'pointer',
+                transition: 'all .15s',
+                letterSpacing: '.02em',
+              }}
+            >
+              {DEPOT_LABELS[d]}
+            </button>
+          ))}
+          <span style={{ marginLeft: 'auto', fontSize: '.75rem', color: 'var(--text-muted)' }}>
+            Showing records for <strong style={{ color: 'var(--primary)' }}>{selectedDepot}</strong> depot
+          </span>
+        </div>
+
         {/* Re-sampling due alert */}
-        <DueAlert />
+        <DueAlert depot={selectedDepot} />
 
         {/* Stats bar */}
         <StatsBar />
 
         {activeTab === 'form' && (
-          <EntryForm onSuccess={() => {
+          <EntryForm depot={selectedDepot} onSuccess={() => {
             setRefreshKey(k => k + 1)
           }} />
         )}
         {activeTab === 'records' && (
-          <DataTable refreshKey={refreshKey} />
+          <DataTable refreshKey={refreshKey} depot={selectedDepot} />
         )}
         {activeTab === 'search' && (
           <CoachSearch />
         )}
         {activeTab === '90days' && (
-          <Coaches90Days />
+          <Coaches90Days depot={selectedDepot} />
         )}
       </main>
 

@@ -1,12 +1,17 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { db, initDB } from '@/lib/db'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     await initDB()
+    const url   = new URL(req.url)
+    const depot = url.searchParams.get('depot') || ''
+
+    const depotFilter = depot ? `WHERE UPPER(tc.depot) = UPPER(?)` : ''
+    const args: (string | number)[] = depot ? [depot] : []
 
     // Coaches from master list (total_coaches) whose LAST test date is > 90 days ago
-    // OR who have never been tested at all
+    // OR who have never been tested at all — filtered by depot
     const result = await db.execute({
       sql: `
         SELECT
@@ -19,13 +24,14 @@ export async function GET() {
         FROM total_coaches tc
         LEFT JOIN bio_test_entries e
           ON UPPER(e.coach_no) = UPPER(tc.coach_no)
+        ${depotFilter}
         GROUP BY UPPER(tc.coach_no), tc.coach_no, tc.train_no, tc.coach_type, tc.depot
         HAVING last_test_date IS NULL OR days_ago > 90
         ORDER BY
           CASE WHEN last_test_date IS NULL THEN 0 ELSE 1 END ASC,
           days_ago DESC
       `,
-      args: [],
+      args,
     })
 
     return NextResponse.json({ coaches: result.rows, total: result.rows.length })

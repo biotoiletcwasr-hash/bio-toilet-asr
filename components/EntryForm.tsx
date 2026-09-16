@@ -4,6 +4,7 @@ import { LIMITS, calculateResult } from '@/lib/types'
 
 interface Props {
   onSuccess: () => void
+  depot: string
 }
 
 const EMPTY: Record<string, string> = {
@@ -35,7 +36,7 @@ type SavedInfo = {
   second_test_result: string | null
 }
 
-export default function EntryForm({ onSuccess }: Props) {
+export default function EntryForm({ onSuccess, depot }: Props) {
   const [form, setForm]               = useState(EMPTY)
   const [loading, setLoading]         = useState(false)
   const [error, setError]             = useState('')
@@ -76,7 +77,7 @@ export default function EntryForm({ onSuccess }: Props) {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, depot }),
       })
       if (!res.ok) throw new Error('Server error')
       const data = await res.json()

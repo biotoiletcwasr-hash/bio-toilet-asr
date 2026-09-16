@@ -16,14 +16,16 @@ function fmtDate(iso: string | null | undefined): string {
   return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : iso
 }
 
-export default function Coaches90Days() {
+export default function Coaches90Days({ depot }: { depot: string }) {
   const [coaches, setCoaches] = useState<Coach90[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState('')
   const [search, setSearch]   = useState('')
 
   useEffect(() => {
-    fetch('/api/coaches-90days')
+    setLoading(true)
+    setError('')
+    fetch(`/api/coaches-90days?depot=${encodeURIComponent(depot)}`)
       .then(r => r.json())
       .then(d => {
         if (d.error) setError(d.error)
@@ -31,7 +33,7 @@ export default function Coaches90Days() {
       })
       .catch(() => setError('Failed to load data.'))
       .finally(() => setLoading(false))
-  }, [])
+  }, [depot])
 
   const filtered = coaches.filter(c => {
     const q = search.toLowerCase()

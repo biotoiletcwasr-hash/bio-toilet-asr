@@ -1,9 +1,14 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { db, initDB } from '@/lib/db'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     await initDB()
+    const url   = new URL(req.url)
+    const depot = url.searchParams.get('depot') || ''
+
+    const depotFilter = depot ? `AND UPPER(e.depot) = UPPER(?)` : ''
+    const args: (string | number)[] = depot ? [depot] : []
 
     // Show coaches where ANY entry on their LATEST TEST DATE is FAIL without 2nd test.
     // Uses MAX(date) per coach so multi-tank coaches (e.g. Tank1–4 each a row) are correctly
@@ -17,13 +22,14 @@ export async function GET() {
         WHERE e.result = 'FAIL'
           AND (e.second_test_result IS NULL OR UPPER(TRIM(e.second_test_result)) != 'NA')
           AND (e.second_test_date IS NULL OR e.second_test_date = '')
+          ${depotFilter}
           AND e.date = (
             SELECT MAX(e2.date) FROM bio_test_entries e2
             WHERE UPPER(e2.coach_no) = UPPER(e.coach_no)
           )
         ORDER BY e.date ASC, UPPER(e.coach_no), e.bio_tank_no
       `,
-      args: [],
+      args,
     })
 
     const today = new Date()
