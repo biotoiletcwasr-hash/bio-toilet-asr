@@ -167,7 +167,7 @@ export default function Home() {
           <DataTable refreshKey={refreshKey} depot={selectedDepot} />
         )}
         {activeTab === 'search' && (
-          <CoachSearch />
+          <CoachSearch depot={selectedDepot} />
         )}
         {activeTab === '90days' && (
           <Coaches90Days depot={selectedDepot} />

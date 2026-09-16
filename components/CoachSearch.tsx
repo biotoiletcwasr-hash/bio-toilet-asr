@@ -216,20 +216,34 @@ function ResamplingSection({ coachNo, trainNo, initialRemarks }: {
 }
 
 // ── Main CoachSearch ──────────────────────────────────────────
-export default function CoachSearch() {
+export default function CoachSearch({ depot }: { depot: string }) {
   const [query, setQuery]     = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult]   = useState<SearchResult | null>(null)
   const [error, setError]     = useState('')
   const [showHistory, setShowHistory] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const prevDepotRef = useRef(depot)
+
+  // Clear results when depot changes
+  if (prevDepotRef.current !== depot) {
+    prevDepotRef.current = depot
+    if (result || error) {
+      // schedule clear after render
+      setTimeout(() => {
+        setResult(null); setError(''); setShowHistory(false)
+      }, 0)
+    }
+  }
 
   async function doSearch(val?: string) {
     const coachNo = (val ?? query).trim().toUpperCase()
     if (!coachNo) return
     setLoading(true); setError(''); setResult(null); setShowHistory(false)
     try {
-      const res  = await fetch(`/api/coach-search?coach_no=${encodeURIComponent(coachNo)}`)
+      const res  = await fetch(
+        `/api/coach-search?coach_no=${encodeURIComponent(coachNo)}&depot=${encodeURIComponent(depot)}`
+      )
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Search failed')
       setResult(data)
@@ -253,7 +267,8 @@ export default function CoachSearch() {
       <div className="card" style={{ padding: '1.5rem' }}>
         <h2 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '.25rem' }}>🔍 Search Coach Status</h2>
         <p style={{ fontSize: '.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-          Coach No. search karo — due status, master list, test history, aur resampling remarks ek saath.
+          Coach No. search karo — due status, test history, aur resampling remarks ek saath.{' '}
+          <span style={{ fontWeight: 700, color: 'var(--primary)' }}>Depot: {depot}</span>
         </p>
         <div style={{ display: 'flex', gap: '.75rem', flexWrap: 'wrap' }}>
           <input

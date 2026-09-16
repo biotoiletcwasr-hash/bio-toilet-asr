@@ -8,6 +8,17 @@ export async function GET(req: NextRequest) {
     const coachNo = raw.toUpperCase()
     if (!coachNo) return NextResponse.json({ error: 'coach_no required' }, { status: 400 })
 
+    const depotParam = req.nextUrl.searchParams.get('depot')?.trim().toUpperCase() || ''
+    // Build depot clause: if depot provided, filter strictly by it;
+    // for ASR also match legacy NULL rows (pre-backfill safety net)
+    const depotClause = depotParam
+      ? depotParam === 'ASR'
+        ? `AND (UPPER(depot) = 'ASR' OR depot IS NULL)`
+        : `AND UPPER(depot) = '${depotParam}'`
+      : ''
+    const depotArgs = (q: string[], ...extras: string[]) =>
+      depotParam ? [...q, ...extras] : [...q, ...extras]
+
     // 1. OVERDUE check: ANY tank on the latest test date is FAIL without 2nd test
     const overdueRes = await db.execute({
       sql: `SELECT s_no, date, train_no, code, bio_tank_no,
@@ -19,35 +30,38 @@ export async function GET(req: NextRequest) {
               AND (second_test_date IS NULL OR second_test_date = '')
               AND (second_test_result IS NULL OR UPPER(second_test_result) != 'NA')
               AND date(date, '+30 days') < date('now','localtime')
-              AND date = (SELECT MAX(date) FROM bio_test_entries WHERE UPPER(coach_no) = ?)
+              ${depotClause}
+              AND date = (SELECT MAX(date) FROM bio_test_entries WHERE UPPER(coach_no) = ? ${depotClause})
             ORDER BY s_no DESC LIMIT 1`,
       args: [coachNo, coachNo],
     })
 
-    // 2. Coach master info from total_coaches
+    // 2. Coach master info from total_coaches (ASR master list — shown for any depot search)
     const masterRes = await db.execute({
       sql: `SELECT train_no, coach_type as code, depot, extra_1 as status
             FROM total_coaches WHERE UPPER(coach_no) = ? LIMIT 1`,
       args: [coachNo],
     })
 
-    // 3. Last test entry (any result)
+    // 3. Last test entry (any result), filtered by depot
     const lastTestRes = await db.execute({
       sql: `SELECT s_no, date, train_no, code, result,
                    second_test_date, second_test_result,
                    CAST(julianday('now','localtime') - julianday(date) AS INTEGER) as days_ago
             FROM bio_test_entries
             WHERE UPPER(coach_no) = ?
+            ${depotClause}
             ORDER BY date DESC, s_no DESC LIMIT 1`,
       args: [coachNo],
     })
 
-    // 4. All test history for this coach
+    // 4. All test history for this coach, filtered by depot
     const historyRes = await db.execute({
       sql: `SELECT s_no, date, train_no, result, second_test_date, second_test_result,
                    CAST(julianday('now','localtime') - julianday(date) AS INTEGER) as days_ago
             FROM bio_test_entries
             WHERE UPPER(coach_no) = ?
+            ${depotClause}
             ORDER BY date DESC, s_no DESC`,
       args: [coachNo],
     })
