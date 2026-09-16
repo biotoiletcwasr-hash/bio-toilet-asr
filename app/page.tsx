@@ -6,10 +6,11 @@ import DataTable from '@/components/DataTable'
 import ThemeToggle from '@/components/ThemeToggle'
 import DueAlert from '@/components/DueAlert'
 import CoachSearch from '@/components/CoachSearch'
+import Coaches90Days from '@/components/Coaches90Days'
 
 export default function Home() {
   const [refreshKey, setRefreshKey] = useState(0)
-  const [activeTab, setActiveTab] = useState<'form' | 'records' | 'search'>('form')
+  const [activeTab, setActiveTab] = useState<'form' | 'records' | 'search' | '90days'>('form')
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
@@ -70,6 +71,7 @@ export default function Home() {
             { key: 'form',    label: '📝 New Test Entry'       },
             { key: 'records', label: '📋 All Records'          },
             { key: 'search',  label: '🔍 Search Coach Status'  },
+            { key: '90days',  label: '⏰ Coaches > 90 Days'    },
           ].map(tab => (
             <button
               key={tab.key}
@@ -115,6 +117,9 @@ export default function Home() {
         )}
         {activeTab === 'search' && (
           <CoachSearch />
+        )}
+        {activeTab === '90days' && (
+          <Coaches90Days />
         )}
       </main>
 
