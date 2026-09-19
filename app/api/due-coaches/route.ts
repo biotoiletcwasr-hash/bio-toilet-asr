@@ -3,18 +3,19 @@ import { db, initDB } from '@/lib/db'
 
 // DB stores dates as YYYY-DD-MM (e.g. "2026-30-08" = 30 Aug 2026)
 // This parses either YYYY-DD-MM or YYYY-MM-DD into a JS Date (UTC)
+// DB stores dates in multiple formats: YYYY-MM-DD, YYYY-DD-MM, DD.MM.YYYY
 function parseDate(s: string | null): Date | null {
   if (!s) return null
-  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/)
-  if (!m) return null
-  // If second segment > 12 it must be a day → YYYY-DD-MM
-  if (parseInt(m[2]) > 12) {
-    return new Date(`${m[1]}-${m[3]}-${m[2]}T00:00:00Z`)
-  }
-  return new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00Z`)
+  // DD.MM.YYYY or DD-MM-YYYY or DD/MM/YYYY
+  const m1 = s.match(/^(\d{2})[.\-\/](\d{2})[.\-\/](\d{4})$/)
+  if (m1) return new Date(`${m1[3]}-${m1[2]}-${m1[1]}T00:00:00Z`)
+  // YYYY-MM-DD or YYYY-DD-MM
+  const m2 = s.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!m2) return null
+  const [, y, a, b] = m2
+  if (parseInt(a) > 12) return new Date(`${y}-${b}-${a}T00:00:00Z`)
+  return new Date(`${y}-${a}-${b}T00:00:00Z`)
 }
-
-// Normalize any DB date to YYYY-MM-DD string for consistent display/comparison
 function normStr(s: string | null): string | null {
   const d = parseDate(s)
   if (!d || isNaN(d.getTime())) return null

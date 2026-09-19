@@ -1,23 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db, initDB } from '@/lib/db'
 
-// DB stores dates as YYYY-DD-MM (e.g. "2026-15-09") OR YYYY-MM-DD.
-// Detect YYYY-DD-MM when pos 6-7 > 12, then swap to YYYY-MM-DD.
+// DB stores dates in multiple formats: YYYY-MM-DD, YYYY-DD-MM, DD.MM.YYYY
+// Normalize any format → YYYY-MM-DD in SQL
 const NORM = (col: string) =>
-  `CASE WHEN CAST(SUBSTR(${col}, 6, 2) AS INTEGER) > 12
-        THEN SUBSTR(${col}, 1, 4) || '-' || SUBSTR(${col}, 9, 2) || '-' || SUBSTR(${col}, 6, 2)
-        ELSE ${col} END`
+  `CASE
+    WHEN ${col} GLOB '[0-9][0-9].[0-9][0-9].[0-9][0-9][0-9][0-9]'
+    THEN SUBSTR(${col},7,4)||'-'||SUBSTR(${col},4,2)||'-'||SUBSTR(${col},1,2)
+    WHEN CAST(SUBSTR(${col},6,2) AS INTEGER) > 12
+    THEN SUBSTR(${col},1,4)||'-'||SUBSTR(${col},9,2)||'-'||SUBSTR(${col},6,2)
+    ELSE ${col}
+   END`
 
-// JS-side parser for days_ago / status computation
+// JS-side parser: handles DD.MM.YYYY, YYYY-DD-MM, YYYY-MM-DD
 function parseDate(s: string | null): Date | null {
   if (!s) return null
-  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/)
-  if (!m) return null
-  const [, y, a, b] = m
-  // YYYY-DD-MM: day part (a) > 12 → swap
+  // DD.MM.YYYY or DD-MM-YYYY or DD/MM/YYYY
+  const m1 = s.match(/^(\d{2})[.\-\/](\d{2})[.\-\/](\d{4})$/)
+  if (m1) return new Date(`${m1[3]}-${m1[2]}-${m1[1]}T00:00:00Z`)
+  // YYYY-MM-DD or YYYY-DD-MM
+  const m2 = s.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!m2) return null
+  const [, y, a, b] = m2
   if (parseInt(a) > 12) return new Date(`${y}-${b}-${a}T00:00:00Z`)
   return new Date(`${y}-${a}-${b}T00:00:00Z`)
 }
+
 
 function normStr(s: string | null): string | null {
   const d = parseDate(s)
