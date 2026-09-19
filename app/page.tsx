@@ -44,14 +44,12 @@ export default function Home() {
           gap: '1rem', flexWrap: 'wrap',
         }}>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '.75rem', textDecoration: 'none', color: 'inherit' }}>
-            <div style={{
-              width: '42px', height: '42px',
-              background: 'var(--primary)',
-              borderRadius: '.5rem',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '1.4rem',
-              flexShrink: 0,
-            }}>🚽</div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/ir-logo.png"
+              alt="Indian Railways"
+              style={{ width: '48px', height: '48px', flexShrink: 0, borderRadius: '50%' }}
+            />
             <div>
               <h1 style={{ fontSize: '1.1rem', fontWeight: 800, lineHeight: 1.2 }}>
                 Bio Toilet Effluent Testing Lab
