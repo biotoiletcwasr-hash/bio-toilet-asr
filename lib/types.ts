@@ -15,6 +15,7 @@ export interface BioTestEntry {
   second_test_date: string | null
   second_test_result: TestResult | null
   created_at?: string
+  depot?: string
 }
 
 export interface FormEntry {

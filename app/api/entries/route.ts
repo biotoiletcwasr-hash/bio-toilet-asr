@@ -2,40 +2,53 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db, initDB, getNextSNo } from '@/lib/db'
 import { calculateResult } from '@/lib/types'
 
-// GET all entries
+// GET entries — with per-depot sequential S.No using ROW_NUMBER window function
 export async function GET(req: NextRequest) {
   try {
     await initDB()
-    const url = new URL(req.url)
-    const page = parseInt(url.searchParams.get('page') || '1')
-    const limit = parseInt(url.searchParams.get('limit') || '20')
+    const url    = new URL(req.url)
+    const page   = parseInt(url.searchParams.get('page')  || '1')
+    const limit  = parseInt(url.searchParams.get('limit') || '20')
     const search = url.searchParams.get('search') || ''
     const depot  = url.searchParams.get('depot')  || ''
+    const exportAll = url.searchParams.get('export') === 'true'
     const offset = (page - 1) * limit
 
     const searchParam = `%${search}%`
-    const depotFilter = depot ? `AND UPPER(depot) = UPPER(?)` : ''
+    const depotFilter = depot ? `AND UPPER(t.depot) = UPPER(?)` : ''
     const baseArgs    = depot
       ? [searchParam, searchParam, searchParam, depot]
       : [searchParam, searchParam, searchParam]
 
+    // depot_s_no: per-depot sequential number ordered by insertion (global s_no)
+    const paginationClause = exportAll
+      ? ''
+      : `LIMIT ${limit} OFFSET ${offset}`
+
     const result = await db.execute({
-      sql: `SELECT * FROM bio_test_entries
-            WHERE (train_no LIKE ? OR coach_no LIKE ? OR code LIKE ?)
+      sql: `SELECT t.*, rn.depot_s_no
+            FROM bio_test_entries t
+            JOIN (
+              SELECT id,
+                     ROW_NUMBER() OVER (PARTITION BY depot ORDER BY s_no ASC) AS depot_s_no
+              FROM bio_test_entries
+            ) rn ON rn.id = t.id
+            WHERE (t.train_no LIKE ? OR t.coach_no LIKE ? OR t.code LIKE ?)
             ${depotFilter}
-            ORDER BY s_no DESC LIMIT ? OFFSET ?`,
-      args: [...baseArgs, limit, offset],
+            ORDER BY t.s_no DESC
+            ${paginationClause}`,
+      args: baseArgs,
     })
 
     const countResult = await db.execute({
-      sql: `SELECT COUNT(*) as total FROM bio_test_entries
-            WHERE (train_no LIKE ? OR coach_no LIKE ? OR code LIKE ?) ${depotFilter}`,
+      sql: `SELECT COUNT(*) as total FROM bio_test_entries t
+            WHERE (t.train_no LIKE ? OR t.coach_no LIKE ? OR t.code LIKE ?) ${depotFilter}`,
       args: baseArgs,
     })
 
     return NextResponse.json({
       entries: result.rows,
-      total: countResult.rows[0].total,
+      total:   countResult.rows[0].total,
       page,
       limit,
     })
@@ -57,19 +70,18 @@ export async function POST(req: NextRequest) {
       depot,
     } = body
 
-    const phVal = ph !== '' && ph !== null ? parseFloat(ph) : null
-    const codVal = cod !== '' && cod !== null ? parseFloat(cod) : null
+    const phVal   = ph   !== '' && ph   !== null ? parseFloat(ph)   : null
+    const codVal  = cod  !== '' && cod  !== null ? parseFloat(cod)  : null
     const fcfcVal = fcfc !== '' && fcfc !== null ? parseFloat(fcfc) : null
 
     const result = calculateResult(phVal, codVal, fcfcVal)
-    const sNo = await getNextSNo()
+    const sNo    = await getNextSNo()
 
     const res = await db.execute({
-      sql: `
-        INSERT INTO bio_test_entries
-          (s_no, date, train_no, coach_no, code, bio_tank_no, ph, cod, fcfc, result, second_test_date, second_test_result, depot)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `,
+      sql: `INSERT INTO bio_test_entries
+              (s_no, date, train_no, coach_no, code, bio_tank_no, ph, cod, fcfc, result,
+               second_test_date, second_test_result, depot)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         sNo, date, train_no, coach_no, code, bio_tank_no,
         phVal, codVal, fcfcVal, result,
@@ -79,7 +91,6 @@ export async function POST(req: NextRequest) {
       ],
     })
 
-    // Fetch and return the created row
     const newRow = await db.execute({
       sql: `SELECT * FROM bio_test_entries WHERE id = ?`,
       args: [Number(res.lastInsertRowid ?? 0)],

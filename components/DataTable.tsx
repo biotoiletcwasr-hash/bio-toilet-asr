@@ -228,22 +228,46 @@ export default function DataTable({ refreshKey, depot }: Props) {
     fetchEntries()
   }
 
-  function exportCSV() {
-    const headers = [
-      'S.No','Date','Train No','Coach No','Code','Bio Tank No',
-      'pH','COD','FCFC','Result','2nd Test Date','2nd Test Result'
-    ]
-    const rows = entries.map(e => [
-      e.s_no, e.date, e.train_no, e.coach_no, e.code, e.bio_tank_no,
-      e.ph ?? '', e.cod ?? '', e.fcfc ?? '', e.result,
-      e.second_test_date ?? '', e.second_test_result ?? ''
-    ])
-    const csv = [headers, ...rows].map(r => r.join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a'); a.href = url
-    a.download = `bio-test-${new Date().toISOString().split('T')[0]}.csv`
-    a.click()
+  const [exporting, setExporting] = useState(false)
+
+  async function exportCSV() {
+    setExporting(true)
+    try {
+      // Fetch ALL entries across ALL depots — no depot filter, no pagination
+      const res  = await fetch('/api/entries?export=true')
+      const data = await res.json()
+      const all: BioTestEntry[] = data.entries || []
+
+      // Sort: depot A→Z, then depot_s_no ascending
+      all.sort((a, b) => {
+        const d = (a.depot || '').localeCompare(b.depot || '')
+        if (d !== 0) return d
+        return ((a as any).depot_s_no ?? a.s_no ?? 0) - ((b as any).depot_s_no ?? b.s_no ?? 0)
+      })
+
+      const headers = [
+        'Depot','S.No','Date','Train No','Coach No','Code','Bio Tank No',
+        'pH','COD','FCFC','Result','2nd Test Date','2nd Test Result'
+      ]
+      const rows = all.map(e => [
+        e.depot || '',
+        (e as any).depot_s_no ?? e.s_no,
+        e.date, e.train_no, e.coach_no, e.code, e.bio_tank_no,
+        e.ph ?? '', e.cod ?? '', e.fcfc ?? '', e.result,
+        e.second_test_date ?? '', e.second_test_result ?? ''
+      ])
+      const csv = [headers, ...rows].map(r =>
+        r.map(v => String(v).includes(',') ? `"${v}"` : v).join(',')
+      ).join('\n')
+
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a'); a.href = url
+      a.download = `bio-test-all-depots-${new Date().toISOString().split('T')[0]}.csv`
+      a.click()
+    } finally {
+      setExporting(false)
+    }
   }
 
   const totalPages = Math.ceil(total / LIMIT)
@@ -273,7 +297,7 @@ export default function DataTable({ refreshKey, depot }: Props) {
               onChange={e => { setSearch(e.target.value); setPage(1) }}
               style={{ width: '200px' }}
             />
-            <button className="btn-ghost" onClick={exportCSV} title="Export CSV">⬇ CSV</button>
+            <button className="btn-ghost" onClick={exportCSV} disabled={exporting} title="Export all depots">{exporting ? "⏳ Exporting..." : "⬇ All CSV"}</button>
           </div>
         </div>
 
@@ -295,7 +319,7 @@ export default function DataTable({ refreshKey, depot }: Props) {
               <tbody>
                 {entries.map(e => (
                   <tr key={e.id}>
-                    <td style={{ fontWeight: 700, color: 'var(--primary)' }}>{e.s_no}</td>
+                    <td style={{ fontWeight: 700, color: 'var(--primary)' }}>{(e as any).depot_s_no ?? e.s_no}</td>
                     <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(e.date)}</td>
                     <td style={{ fontWeight: 600 }}>{e.train_no}</td>
                     <td>{e.coach_no}</td>
