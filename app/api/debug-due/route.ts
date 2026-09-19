@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
     const url   = new URL(req.url)
     const depot = (url.searchParams.get('depot') || 'ASR').trim().toUpperCase()
 
-    // Step 1: All FAIL entries with no second test date/result=NA
+    // Step 1: All FAIL entries with no second test
     const failRows = await db.execute({
       sql: `SELECT s_no, date, coach_no, result, second_test_date, second_test_result, depot
             FROM bio_test_entries
@@ -19,38 +19,50 @@ export async function GET(req: NextRequest) {
       args: [depot],
     })
 
-    // Step 2: For each, find max date for that coach
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const todayStr = today.toISOString().split('T')[0]
+    const todayStr = new Date().toISOString().split('T')[0]  // YYYY-MM-DD
 
     const results = []
     for (const r of failRows.rows) {
+      const dateVal = r.date as string | null
+
+      // Get max date for this coach
       const mx = await db.execute({
         sql: `SELECT MAX(date) as max_date FROM bio_test_entries
               WHERE UPPER(coach_no) = UPPER(?) AND (UPPER(depot) = ? OR depot IS NULL)`,
         args: [r.coach_no as string, depot],
       })
-      const maxDate = mx.rows[0].max_date as string
-      const isLatest = r.date === maxDate
+      const maxDate = mx.rows[0].max_date as string | null
+      const isLatest = dateVal === maxDate
 
-      const testDate = new Date(r.date as string)
-      testDate.setHours(0, 0, 0, 0)
-      const dueDate = new Date(testDate)
-      dueDate.setDate(dueDate.getDate() + 30)
-      const dueDateStr = dueDate.toISOString().split('T')[0]
+      // Compute due date safely (pure string math on YYYY-MM-DD)
+      let dueDateStr = null
+      let status = 'INVALID_DATE'
+      if (dateVal && /^\d{4}-\d{2}-\d{2}$/.test(dateVal)) {
+        const d = new Date(dateVal + 'T00:00:00Z')
+        d.setUTCDate(d.getUTCDate() + 30)
+        dueDateStr = d.toISOString().split('T')[0]
+
+        if (!isLatest) {
+          status = 'NOT_LATEST_ENTRY'
+        } else if (todayStr >= dueDateStr) {
+          status = 'OVERDUE'
+        } else {
+          const in7 = new Date(todayStr + 'T00:00:00Z')
+          in7.setUTCDate(in7.getUTCDate() + 7)
+          const in7Str = in7.toISOString().split('T')[0]
+          status = dueDateStr <= in7Str ? 'UPCOMING_7D' : 'NOT_DUE_YET'
+        }
+      }
 
       results.push({
         s_no: r.s_no,
         coach_no: r.coach_no,
-        date: r.date,
+        date: dateVal,
         depot: r.depot,
         max_date: maxDate,
         is_latest: isLatest,
         due_date: dueDateStr,
-        status: isLatest
-          ? (todayStr >= dueDateStr ? 'OVERDUE' : dueDate <= new Date(today.getTime() + 7*86400000) ? 'UPCOMING_7D' : 'NOT_DUE_YET')
-          : 'NOT_LATEST_ENTRY',
+        status,
       })
     }
 
@@ -58,10 +70,11 @@ export async function GET(req: NextRequest) {
       today: todayStr,
       depot,
       total_fail_eligible: failRows.rows.length,
-      overdue: results.filter(r => r.status === 'OVERDUE').length,
+      overdue:     results.filter(r => r.status === 'OVERDUE').length,
       upcoming_7d: results.filter(r => r.status === 'UPCOMING_7D').length,
       not_due_yet: results.filter(r => r.status === 'NOT_DUE_YET').length,
-      not_latest: results.filter(r => r.status === 'NOT_LATEST_ENTRY').length,
+      not_latest:  results.filter(r => r.status === 'NOT_LATEST_ENTRY').length,
+      invalid_date:results.filter(r => r.status === 'INVALID_DATE').length,
       entries: results,
     })
   } catch (err: unknown) {
