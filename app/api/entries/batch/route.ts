@@ -55,18 +55,6 @@ export async function POST(req: NextRequest) {
     const firstSNo = lastVal - count + 1
 
 
-    // Normalize any date format → YYYY-MM-DD before storing
-    function toISO(s: string | null | undefined): string {
-      if (!s) return ''
-      // DD.MM.YYYY  DD-MM-YYYY  DD/MM/YYYY
-      const m1 = s.match(/^(\d{2})[.\-\/](\d{2})[.\-\/](\d{4})$/)
-      if (m1) return `${m1[3]}-${m1[2]}-${m1[1]}`
-      // YYYY-DD-MM (old bulk import format)
-      const m2 = s.match(/^(\d{4})-(\d{2})-(\d{2})$/)
-      if (m2 && parseInt(m2[2]) > 12) return `${m2[1]}-${m2[3]}-${m2[2]}`
-      return s
-    }
-
     // ── Build batch of INSERT statements ────────────────────────────────────
     const inserts = entries.map((e, i) => {
       const sNo = firstSNo + i
