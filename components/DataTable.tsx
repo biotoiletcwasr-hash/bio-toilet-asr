@@ -233,24 +233,21 @@ export default function DataTable({ refreshKey, depot }: Props) {
   async function exportCSV() {
     setExporting(true)
     try {
-      // Fetch ALL entries across ALL depots — no depot filter, no pagination
-      const res  = await fetch('/api/entries?export=true')
+      // Fetch ALL entries for the current depot only (no pagination)
+      const res  = await fetch(`/api/entries?export=true&depot=${encodeURIComponent(depot)}`)
       const data = await res.json()
       const all: BioTestEntry[] = data.entries || []
 
-      // Sort: depot A→Z, then depot_s_no ascending
-      all.sort((a, b) => {
-        const d = (a.depot || '').localeCompare(b.depot || '')
-        if (d !== 0) return d
-        return ((a as any).depot_s_no ?? a.s_no ?? 0) - ((b as any).depot_s_no ?? b.s_no ?? 0)
-      })
+      // Sort by depot_s_no ascending (oldest first)
+      all.sort((a, b) =>
+        ((a as any).depot_s_no ?? a.s_no ?? 0) - ((b as any).depot_s_no ?? b.s_no ?? 0)
+      )
 
       const headers = [
-        'Depot','S.No','Date','Train No','Coach No','Code','Bio Tank No',
+        'S.No','Date','Train No','Coach No','Code','Bio Tank No',
         'pH','COD','FCFC','Result','2nd Test Date','2nd Test Result'
       ]
       const rows = all.map(e => [
-        e.depot || '',
         (e as any).depot_s_no ?? e.s_no,
         e.date, e.train_no, e.coach_no, e.code, e.bio_tank_no,
         e.ph ?? '', e.cod ?? '', e.fcfc ?? '', e.result,
@@ -263,7 +260,7 @@ export default function DataTable({ refreshKey, depot }: Props) {
       const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
       const url  = URL.createObjectURL(blob)
       const a    = document.createElement('a'); a.href = url
-      a.download = `bio-test-all-depots-${new Date().toISOString().split('T')[0]}.csv`
+      a.download = `bio-test-${depot}-${new Date().toISOString().split('T')[0]}.csv`
       a.click()
     } finally {
       setExporting(false)
@@ -297,7 +294,7 @@ export default function DataTable({ refreshKey, depot }: Props) {
               onChange={e => { setSearch(e.target.value); setPage(1) }}
               style={{ width: '200px' }}
             />
-            <button className="btn-ghost" onClick={exportCSV} disabled={exporting} title="Export all depots">{exporting ? "⏳ Exporting..." : "⬇ All CSV"}</button>
+            <button className="btn-ghost" onClick={exportCSV} disabled={exporting} title={`Export all ${depot} records`}>{exporting ? "⏳..." : `⬇ ${depot} CSV`}</button>
           </div>
         </div>
 
