@@ -1,16 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db, initDB } from '@/lib/db'
 
+// DB stores dates as YYYY-DD-MM (e.g. "2026-30-08" = 30 Aug 2026)
+// This parses either YYYY-DD-MM or YYYY-MM-DD into a JS Date (UTC)
+function parseDate(s: string | null): Date | null {
+  if (!s) return null
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!m) return null
+  // If second segment > 12 it must be a day → YYYY-DD-MM
+  if (parseInt(m[2]) > 12) {
+    return new Date(`${m[1]}-${m[3]}-${m[2]}T00:00:00Z`)
+  }
+  return new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00Z`)
+}
+
+// Normalize any DB date to YYYY-MM-DD string for consistent display/comparison
+function normStr(s: string | null): string | null {
+  const d = parseDate(s)
+  if (!d || isNaN(d.getTime())) return null
+  return d.toISOString().split('T')[0]
+}
+
 export async function GET(req: NextRequest) {
   try {
     await initDB()
     const url   = new URL(req.url)
     const depot = (url.searchParams.get('depot') || '').trim().toUpperCase()
 
-    // Build depot filter and args for the OUTER query and INNER subquery.
-    // ASR (and blank/legacy):  match rows where depot = 'ASR' OR depot IS NULL
-    // FZR / JUC:               match rows where UPPER(depot) = UPPER(?)
-    // No depot specified:      no filter at all
     let outerDepotFilter = ''
     let innerDepotFilter = ''
     const args: (string | number)[] = []
@@ -18,15 +34,17 @@ export async function GET(req: NextRequest) {
     if (depot === 'ASR') {
       outerDepotFilter = `AND (UPPER(e.depot) = 'ASR' OR e.depot IS NULL)`
       innerDepotFilter = `AND (UPPER(e2.depot) = 'ASR' OR e2.depot IS NULL)`
-      // no extra args — the depot value is inlined as a literal
     } else if (depot) {
       outerDepotFilter = `AND UPPER(e.depot) = UPPER(?)`
       innerDepotFilter = `AND UPPER(e2.depot) = UPPER(?)`
-      // The inner subquery arg must come BEFORE the outer depot arg
-      // because ? placeholders are positional. We push two copies.
       args.push(depot, depot)
     }
-    // else: no depot filter, args stays []
+
+    // SQLite expression: convert YYYY-DD-MM → YYYY-MM-DD so MAX() sorts correctly
+    const normExpr = (col: string) =>
+      `CASE WHEN CAST(SUBSTR(${col}, 6, 2) AS INTEGER) > 12
+            THEN SUBSTR(${col}, 1, 4) || '-' || SUBSTR(${col}, 9, 2) || '-' || SUBSTR(${col}, 6, 2)
+            ELSE ${col} END`
 
     const result = await db.execute({
       sql: `
@@ -36,29 +54,31 @@ export async function GET(req: NextRequest) {
           AND (e.second_test_result IS NULL OR UPPER(TRIM(e.second_test_result)) != 'NA')
           AND (e.second_test_date IS NULL OR e.second_test_date = '')
           ${outerDepotFilter}
-          AND e.date = (
-            SELECT MAX(e2.date) FROM bio_test_entries e2
+          AND ${normExpr('e.date')} = (
+            SELECT MAX(${normExpr('e2.date')})
+            FROM bio_test_entries e2
             WHERE UPPER(e2.coach_no) = UPPER(e.coach_no)
             ${innerDepotFilter}
           )
-        ORDER BY e.date ASC, UPPER(e.coach_no), e.bio_tank_no
+        ORDER BY ${normExpr('e.date')} ASC, UPPER(e.coach_no), e.bio_tank_no
       `,
       args,
     })
 
     const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    today.setUTCHours(0, 0, 0, 0)
     const in7Days = new Date(today)
-    in7Days.setDate(in7Days.getDate() + 7)
+    in7Days.setUTCDate(in7Days.getUTCDate() + 7)
 
     const overdue: any[] = []
     const upcoming: any[] = []
 
     for (const row of result.rows) {
-      const testDate = new Date(row.date as string)
-      testDate.setHours(0, 0, 0, 0)
+      const testDate = parseDate(row.date as string)
+      if (!testDate || isNaN(testDate.getTime())) continue
+
       const dueDate = new Date(testDate)
-      dueDate.setDate(dueDate.getDate() + 30)
+      dueDate.setUTCDate(dueDate.getUTCDate() + 30)
 
       const dueDateStr = dueDate.toISOString().split('T')[0]
       const entry = {
@@ -66,7 +86,7 @@ export async function GET(req: NextRequest) {
         train_no:    row.train_no,
         code:        row.code,
         bio_tank_no: row.bio_tank_no,
-        test_date:   row.date,
+        test_date:   normStr(row.date as string),  // always YYYY-MM-DD to frontend
         due_date:    dueDateStr,
       }
 
