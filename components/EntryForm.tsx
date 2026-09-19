@@ -623,7 +623,7 @@ export default function EntryForm({ onSuccess, depot }: Props) {
         </div>
 
         {/* Tank rows */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '.75rem', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '.4rem', marginBottom: '1rem' }}>
           {tanks.map((tank, i) => (
             <TankCard
               key={i}
