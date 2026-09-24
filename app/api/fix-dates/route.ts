@@ -1,17 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db, initDB } from '@/lib/db'
 
-/** Convert DD-MM-YYYY or DD/MM/YYYY → YYYY-MM-DD. Returns null if already OK. */
+/**
+ * Normalize any date string to YYYY-MM-DD.
+ * Returns null if already correct (no update needed).
+ * Handles:
+ *   DD-MM-YYYY  →  YYYY-MM-DD
+ *   DD/MM/YYYY  →  YYYY-MM-DD
+ *   DD.MM.YYYY  →  YYYY-MM-DD
+ *   DD.MM.YY   →  YYYY-MM-DD  (assumes 20xx)
+ */
 function fixDate(val: string | null): string | null {
   if (!val) return null
   const s = val.trim()
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return null  // already correct
-  const m = s.match(/^(\d{2})[-/](\d{2})[-/](\d{4})$/)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return null  // already YYYY-MM-DD
+
+  // DD-MM-YYYY or DD/MM/YYYY
+  let m = s.match(/^(\d{2})[-/](\d{2})[-/](\d{4})$/)
   if (m) return `${m[3]}-${m[2]}-${m[1]}`
-  return null
+
+  // DD.MM.YYYY
+  m = s.match(/^(\d{2})\.(\d{2})\.(\d{4})$/)
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`
+
+  // DD.MM.YY  (e.g. 14.09.26 → 2026-09-14)
+  m = s.match(/^(\d{2})\.(\d{2})\.(\d{2})$/)
+  if (m) return `20${m[3]}-${m[2]}-${m[1]}`
+
+  return null  // unknown format — leave alone
 }
 
-// POST /api/fix-dates  — one-time migration to fix wrongly formatted dates
+// POST /api/fix-dates  — one-time migration to normalize all date formats to YYYY-MM-DD
 export async function POST(req: NextRequest) {
   await initDB()
 
@@ -22,6 +41,7 @@ export async function POST(req: NextRequest) {
 
   let fixed = 0
   const errors: string[] = []
+  const samples: string[] = []
 
   for (const row of all.rows) {
     const id = row.id as number
@@ -29,6 +49,7 @@ export async function POST(req: NextRequest) {
     const newSd   = fixDate(row.second_test_date as string | null)
 
     if (newDate !== null || newSd !== null) {
+      if (samples.length < 5) samples.push(`id=${id}: "${row.date}" → "${newDate ?? row.date}"`)
       try {
         if (newDate !== null && newSd !== null) {
           await db.execute({
@@ -56,7 +77,8 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     total: all.rows.length,
     fixed,
+    samples,
     errors,
-    message: errors.length ? 'Completed with errors' : 'Done',
+    message: errors.length ? 'Completed with errors' : 'Done — all dates normalized to YYYY-MM-DD',
   })
 }

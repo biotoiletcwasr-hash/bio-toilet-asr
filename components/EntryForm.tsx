@@ -60,10 +60,16 @@ function tankResult(tank: TankRow): 'PASS' | 'FAIL' | 'PENDING' {
   return calculateResult(parsedNum(tank.ph), parsedNum(tank.cod), parsedNum(tank.fcfc))
 }
 
-function fmtDate(iso: string | null | undefined) {
-  if (!iso) return '—'
-  const p = iso.split('-')
-  return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : iso
+function fmtDate(raw: string | null | undefined): string {
+  if (!raw) return '—'
+  const s = raw.trim()
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`
+  m = s.match(/^(\d{2})\.(\d{2})\.(\d{4})$/)
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`
+  m = s.match(/^(\d{2})\.(\d{2})\.(\d{2})$/)
+  if (m) return `${m[1]}-${m[2]}-20${m[3]}`
+  return s
 }
 
 // ─── TankCard ─────────────────────────────────────────────────────────────────

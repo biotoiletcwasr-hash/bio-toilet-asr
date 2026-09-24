@@ -2,11 +2,19 @@
 import { useState, useEffect, useCallback } from 'react'
 import { BioTestEntry, calculateResult } from '@/lib/types'
 
-function fmtDate(iso: string | null | undefined): string {
-  if (!iso) return '—'
-  const p = iso.split('-')
-  if (p.length === 3 && p[0].length === 4) return `${p[2]}-${p[1]}-${p[0]}`
-  return iso
+function fmtDate(raw: string | null | undefined): string {
+  if (!raw) return '—'
+  const s = raw.trim()
+  // YYYY-MM-DD → DD-MM-YYYY
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`
+  // DD.MM.YYYY → DD-MM-YYYY
+  m = s.match(/^(\d{2})\.(\d{2})\.(\d{4})$/)
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`
+  // DD.MM.YY → DD-MM-20YY
+  m = s.match(/^(\d{2})\.(\d{2})\.(\d{2})$/)
+  if (m) return `${m[1]}-${m[2]}-20${m[3]}`
+  return s
 }
 
 interface Props {
