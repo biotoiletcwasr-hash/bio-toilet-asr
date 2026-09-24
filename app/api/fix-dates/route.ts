@@ -13,7 +13,8 @@ import { db, initDB } from '@/lib/db'
 function fixDate(val: string | null): string | null {
   if (!val) return null
   const s = val.trim()
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return null  // already YYYY-MM-DD
+  // Only skip if month is valid (01-12); else fall through to swap-month fix
+  if (/^\d{4}-(0[1-9]|1[0-2])-\d{2}$/.test(s)) return null  // already valid YYYY-MM-DD
 
   // DD-MM-YYYY or DD/MM/YYYY
   let m = s.match(/^(\d{2})[-/](\d{2})[-/](\d{4})$/)
