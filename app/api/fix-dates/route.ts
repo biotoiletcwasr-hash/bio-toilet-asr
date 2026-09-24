@@ -27,6 +27,12 @@ function fixDate(val: string | null): string | null {
   m = s.match(/^(\d{2})\.(\d{2})\.(\d{2})$/)
   if (m) return `20${m[3]}-${m[2]}-${m[1]}`
 
+  // YYYY-MM-DD where month > 12 means DD/MM were swapped (was MM-DD-YYYY input)
+  // e.g. 2026-25-06 → 2026-06-25
+  const swapped = s.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (swapped && parseInt(swapped[2]) > 12 && parseInt(swapped[3]) <= 12) {
+    return `${swapped[1]}-${swapped[3]}-${swapped[2]}`
+  }
   return null  // unknown format — leave alone
 }
 
