@@ -275,7 +275,7 @@ export default function CoachSearch({ depot }: { depot: string }) {
       <div className="card" style={{ padding: '1.5rem' }}>
         <h2 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '.25rem' }}>🔍 Search Coach Status</h2>
         <p style={{ fontSize: '.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-          Coach No. search karo — due status, test history, aur resampling remarks ek saath.{' '}
+          Search by Coach No. — view due status, complete test history, and resampling remarks together.{' '}
           <span style={{ fontWeight: 700, color: 'var(--primary)' }}>Depot: {depot}</span>
         </p>
         <div style={{ display: 'flex', gap: '.75rem', flexWrap: 'wrap' }}>
@@ -408,7 +408,7 @@ export default function CoachSearch({ depot }: { depot: string }) {
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.78rem' }}>
                     <thead>
                       <tr style={{ borderBottom: '2px solid var(--border)' }}>
-                        {['S.No','Date','Train','Result','2nd Test','2nd Result','Days Ago'].map(h => (
+                        {['S.No','Date','Train','Tank No.','Result','2nd Test','2nd Result','Days Ago'].map(h => (
                           <th key={h} style={{ textAlign: 'left', padding: '.4rem .6rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', fontSize: '.65rem', letterSpacing: '.05em', whiteSpace: 'nowrap' }}>{h}</th>
                         ))}
                       </tr>
@@ -419,6 +419,7 @@ export default function CoachSearch({ depot }: { depot: string }) {
                           <td style={{ padding: '.4rem .6rem', fontWeight: 700, color: 'var(--primary)' }}>#{h.s_no}</td>
                           <td style={{ padding: '.4rem .6rem', whiteSpace: 'nowrap' }}>{fmtDate(h.date)}</td>
                           <td style={{ padding: '.4rem .6rem' }}>{h.train_no}</td>
+                          <td style={{ padding: '.4rem .6rem', color: 'var(--text-muted)' }}>{(h as any).bio_tank_no || '—'}</td>
                           <td style={{ padding: '.4rem .6rem' }}><ResultPill result={h.result} /></td>
                           <td style={{ padding: '.4rem .6rem', whiteSpace: 'nowrap', color: 'var(--text-muted)' }}>{fmtDate(h.second_test_date)}</td>
                           <td style={{ padding: '.4rem .6rem' }}>{h.second_test_result ? <ResultPill result={h.second_test_result} /> : <span style={{ color: 'var(--text-muted)' }}>—</span>}</td>
