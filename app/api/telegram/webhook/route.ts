@@ -139,9 +139,11 @@ async function handleMessage(msg: {
   // Get user
   const user = await getUser(chatId)
 
-  // /start — always available
+  // /start — always available (may include deep-link token)
   if (text.startsWith('/start')) {
-    await handleStart(chatId, user, firstName)
+    const parts = text.split(' ')
+    const startParam = parts[1]?.trim() || ''
+    await handleStart(chatId, user, firstName, startParam)
     return
   }
 
@@ -178,7 +180,12 @@ async function handleMessage(msg: {
 }
 
 // ── /start — Registration flow ───────────────────────────────────────────────
-async function handleStart(chatId: string, existingUser: Record<string, unknown> | null, firstName: string) {
+async function handleStart(
+  chatId: string,
+  existingUser: Record<string, unknown> | null,
+  firstName: string,
+  startParam = ''
+) {
   if (existingUser?.is_active) {
     await send(
       chatId,
@@ -188,11 +195,53 @@ async function handleStart(chatId: string, existingUser: Record<string, unknown>
     )
     return
   }
+
+  // ── Deep link registration via app-generated token ──
+  if (startParam) {
+    const tokenRow = await db.execute({
+      sql: `SELECT * FROM telegram_link_tokens
+            WHERE token = ? AND used = 0 AND datetime('now') < datetime(expires_at)`,
+      args: [startParam],
+    })
+
+    if (tokenRow.rows[0]) {
+      const td = tokenRow.rows[0]
+      // Auto-register and approve (link was generated from within the app)
+      await db.execute({
+        sql: `INSERT OR REPLACE INTO telegram_users (chat_id, name, depot, role, is_active)
+              VALUES (?, ?, ?, 'staff', 1)`,
+        args: [chatId, td.name, td.depot],
+      })
+      await db.execute({
+        sql: `UPDATE telegram_link_tokens SET used = 1 WHERE token = ?`,
+        args: [startParam],
+      })
+      await clearSession(chatId)
+      await send(
+        chatId,
+        `🎉 <b>Connected!</b>\n\n` +
+        `👤 <b>${td.name}</b> | ${td.depot}\n\n` +
+        `Ab aap bot use kar sakte hain.\n/help — commands list`
+      )
+      const admin = adminChatId()
+      if (admin && admin !== chatId) {
+        await send(admin, `✅ <b>${td.name}</b> (${td.depot}) app se connect ho gaya! 📱`)
+      }
+      return
+    } else {
+      await send(chatId,
+        `❌ Link expired ho gaya ya already use ho chuka hai.\n\nAdmin se naya link maango.`
+      )
+      return
+    }
+  }
+
   if (existingUser && !existingUser.is_active) {
     await send(chatId, `⏳ Aapki registration request pending hai. Admin se contact karein.`)
     return
   }
-  // New user
+
+  // Normal manual registration
   await setSession(chatId, 'REG_NAME', { firstName })
   await send(
     chatId,

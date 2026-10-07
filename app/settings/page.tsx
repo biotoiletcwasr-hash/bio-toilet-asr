@@ -317,6 +317,161 @@ function CoachListStatus() {
   )
 }
 
+
+function TelegramConnectCard() {
+  const [name, setName] = useState('')
+  const [depot, setDepot] = useState('ASR')
+  const [state, setState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [link, setLink] = useState('')
+  const [copied, setCopied] = useState(false)
+  const [message, setMessage] = useState('')
+
+  async function handleGenerate(e: React.FormEvent) {
+    e.preventDefault()
+    if (!name.trim()) { setState('error'); setMessage('Please enter a name.'); return }
+    setState('loading'); setMessage(''); setLink(''); setCopied(false)
+    try {
+      const res = await fetch('/api/telegram/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), depot }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to generate link')
+      setLink(data.link)
+      setState('success')
+      setMessage(`Link generated! Valid for ${data.expires_in_minutes} minutes.`)
+    } catch (err: any) {
+      setState('error')
+      setMessage(err.message || 'Something went wrong.')
+    }
+  }
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(link)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      setState('error'); setMessage('Could not copy — please copy manually.')
+    }
+  }
+
+  const isSuccess = state === 'success'
+  const isError = state === 'error'
+
+  return (
+    <div className="card" style={{ padding: '1.5rem' }}>
+      <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '.25rem' }}>
+        Connect Telegram User
+      </h3>
+      <p style={{ fontSize: '.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+        Generate a one-click link for a staff member to connect their Telegram. The link expires in
+        <strong style={{ color: 'var(--primary)' }}> 30 minutes</strong> and can only be used once.
+      </p>
+
+      <form onSubmit={handleGenerate} style={{ display: 'flex', flexDirection: 'column', gap: '.75rem', maxWidth: '340px' }}>
+        <input
+          type="text"
+          className="input-field"
+          placeholder="Staff name (e.g. Rahul Kumar)"
+          value={name}
+          onChange={e => { setName(e.target.value); if (state !== 'idle') { setState('idle'); setMessage(''); setLink('') } }}
+          required
+        />
+        <select
+          className="input-field"
+          value={depot}
+          onChange={e => setDepot(e.target.value)}
+          style={{ cursor: 'pointer' }}
+        >
+          <option value="ASR">ASR – Amritsar</option>
+          <option value="FZR">FZR – Firozpur</option>
+          <option value="JUC">JUC – Jalandhar</option>
+        </select>
+        <button
+          type="submit"
+          disabled={state === 'loading'}
+          style={{
+            padding: '.45rem 1.25rem', borderRadius: '.375rem',
+            background: 'var(--primary)', color: 'var(--primary-fg)',
+            border: 'none', fontWeight: 600, fontSize: '.875rem',
+            cursor: state === 'loading' ? 'not-allowed' : 'pointer',
+            opacity: state === 'loading' ? .6 : 1,
+            width: 'fit-content',
+          }}
+        >
+          {state === 'loading' ? 'Generating…' : '🔗 Generate Link'}
+        </button>
+      </form>
+
+      {message && (
+        <div style={{
+          marginTop: '.75rem', padding: '.6rem .9rem',
+          borderRadius: '.375rem', fontSize: '.8rem',
+          color: isSuccess ? 'var(--pass)' : 'var(--fail)',
+          background: isSuccess ? 'var(--pass-bg)' : 'var(--fail-bg)',
+          border: `1px solid ${isSuccess ? 'var(--pass)' : 'var(--fail)'}`,
+          fontWeight: 600, maxWidth: '340px',
+        }}>
+          {isSuccess ? '✅ ' : '❌ '}{message}
+        </div>
+      )}
+
+      {link && (
+        <div style={{
+          marginTop: '1rem',
+          padding: '1rem',
+          borderRadius: '.5rem',
+          background: 'var(--bg-input)',
+          border: '1px solid var(--border)',
+          maxWidth: '480px',
+        }}>
+          <p style={{ fontSize: '.75rem', color: 'var(--text-muted)', marginBottom: '.5rem', fontWeight: 600 }}>
+            Share this link with <strong style={{ color: 'var(--primary)' }}>{name}</strong> ({depot}):
+          </p>
+          <code style={{
+            display: 'block', fontSize: '.7rem',
+            color: 'var(--primary)', wordBreak: 'break-all',
+            marginBottom: '.75rem', lineHeight: 1.5,
+          }}>
+            {link}
+          </code>
+          <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap' }}>
+            <a
+              href={link}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '.35rem',
+                padding: '.4rem 1rem', borderRadius: '.375rem',
+                background: '#229ED9', color: '#fff',
+                textDecoration: 'none', fontWeight: 600, fontSize: '.8rem',
+              }}
+            >
+              ✈️ Open in Telegram
+            </a>
+            <button
+              onClick={handleCopy}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '.35rem',
+                padding: '.4rem 1rem', borderRadius: '.375rem',
+                background: copied ? 'var(--pass)' : 'transparent',
+                color: copied ? '#fff' : 'var(--text)',
+                border: '1.5px solid var(--border)',
+                fontWeight: 600, fontSize: '.8rem', cursor: 'pointer',
+                transition: 'all .15s',
+              }}
+            >
+              {copied ? '✅ Copied!' : '📋 Copy Link'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function SettingsPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
@@ -410,6 +565,17 @@ export default function SettingsPage() {
         </div>
 
         <section>
+          <h2 style={{
+            fontSize: '.75rem', fontWeight: 700,
+            textTransform: 'uppercase', letterSpacing: '.08em',
+            color: 'var(--text-muted)', marginBottom: '.75rem',
+          }}>
+            Telegram Bot
+          </h2>
+          <TelegramConnectCard />
+        </section>
+
+                <section>
           <h2 style={{
             fontSize: '.75rem', fontWeight: 700,
             textTransform: 'uppercase', letterSpacing: '.08em',

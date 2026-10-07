@@ -89,6 +89,17 @@ export async function initDB() {
       args: [],
     },
     {
+      sql: `CREATE TABLE IF NOT EXISTS telegram_link_tokens (
+              token       TEXT PRIMARY KEY,
+              name        TEXT NOT NULL,
+              depot       TEXT NOT NULL,
+              expires_at  TEXT NOT NULL,
+              used        INTEGER NOT NULL DEFAULT 0,
+              created_at  TEXT DEFAULT (datetime('now','localtime'))
+            )`,
+      args: [],
+    },
+    {
       sql: `CREATE TABLE IF NOT EXISTS telegram_sessions (
               chat_id     TEXT PRIMARY KEY,
               step        TEXT,
