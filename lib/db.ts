@@ -77,6 +77,26 @@ export async function initDB() {
             )`,
       args: [],
     },
+    {
+      sql: `CREATE TABLE IF NOT EXISTS telegram_users (
+              chat_id     TEXT PRIMARY KEY,
+              name        TEXT NOT NULL,
+              depot       TEXT NOT NULL,
+              role        TEXT NOT NULL DEFAULT 'staff',
+              is_active   INTEGER NOT NULL DEFAULT 1,
+              created_at  TEXT DEFAULT (datetime('now','localtime'))
+            )`,
+      args: [],
+    },
+    {
+      sql: `CREATE TABLE IF NOT EXISTS telegram_sessions (
+              chat_id     TEXT PRIMARY KEY,
+              step        TEXT,
+              data        TEXT DEFAULT '{}',
+              updated_at  TEXT DEFAULT (datetime('now','localtime'))
+            )`,
+      args: [],
+    },
     // Seed meta defaults (safe with INSERT OR IGNORE)
     { sql: `INSERT OR IGNORE INTO meta (key, value) VALUES ('last_s_no', '0')`, args: [] },
     { sql: `INSERT OR IGNORE INTO meta (key, value) VALUES ('depot_backfill_done', '0')`, args: [] },
