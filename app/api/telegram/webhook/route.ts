@@ -196,6 +196,24 @@ async function handleStart(
     return
   }
 
+  // ── QR code depot-join (permanent, reusable) ──
+  const qrDepotMap: Record<string, string> = {
+    'join-ASR': 'ASR',
+    'join-FZR': 'FZR',
+    'join-JUC': 'JUC',
+  }
+  if (startParam && qrDepotMap[startParam]) {
+    const depot = qrDepotMap[startParam]
+    // Ask for name, remember depot in session
+    await setSession(chatId, 'QR_NAME', { depot, firstName })
+    await send(
+      chatId,
+      `📱 <b>Bio-Toilet Test System — ${depot}</b>\n\n` +
+      `Registration ke liye apna <b>poora naam</b> type karein:`
+    )
+    return
+  }
+
   // ── Deep link registration via app-generated token ──
   if (startParam) {
     const tokenRow = await db.execute({
@@ -262,6 +280,33 @@ async function handleStep(
 
   switch (step) {
     // ── Registration ──
+    case 'QR_NAME': {
+      // Staff scanned QR code — they typed their name
+      const name = text.trim()
+      if (!name || name.length < 2) {
+        await send(chatId, '❌ Valid naam type karein (kam se kam 2 characters).')
+        return
+      }
+      const depot = data.depot || 'ASR'
+      await db.execute({
+        sql: `INSERT OR REPLACE INTO telegram_users (chat_id, name, depot, role, is_active)
+              VALUES (?, ?, ?, 'staff', 1)`,
+        args: [chatId, name, depot],
+      })
+      await clearSession(chatId)
+      await send(
+        chatId,
+        `🎉 <b>Connected!</b>\n\n` +
+        `👤 <b>${name}</b> | ${depot} | Staff\n\n` +
+        `Ab aap bot use kar sakte hain.\n/help — commands list`
+      )
+      const admin = adminChatId()
+      if (admin && admin !== chatId) {
+        await send(admin, `✅ <b>${name}</b> (${depot}) QR scan se connect ho gaya! 📱`)
+      }
+      return
+    }
+
     case 'REG_NAME': {
       if (!text || text.startsWith('/') || text.length < 2) {
         await send(chatId, '⚠️ Valid naam likhein (kam se kam 2 characters):')

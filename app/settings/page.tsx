@@ -318,159 +318,136 @@ function CoachListStatus() {
 }
 
 
-function TelegramConnectCard() {
-  const [name, setName] = useState('')
-  const [depot, setDepot] = useState('ASR')
-  const [state, setState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
-  const [link, setLink] = useState('')
-  const [copied, setCopied] = useState(false)
-  const [message, setMessage] = useState('')
+const DEPOTS = [
+  { key: 'ASR', label: 'ASR – Amritsar', color: '#2563eb' },
+  { key: 'FZR', label: 'FZR – Firozpur', color: '#16a34a' },
+  { key: 'JUC', label: 'JUC – Jalandhar', color: '#9333ea' },
+]
 
-  async function handleGenerate(e: React.FormEvent) {
-    e.preventDefault()
-    if (!name.trim()) { setState('error'); setMessage('Please enter a name.'); return }
-    setState('loading'); setMessage(''); setLink(''); setCopied(false)
-    try {
-      const res = await fetch('/api/telegram/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), depot }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to generate link')
-      setLink(data.link)
-      setState('success')
-      setMessage(`Link generated! Valid for ${data.expires_in_minutes} minutes.`)
-    } catch (err: any) {
-      setState('error')
-      setMessage(err.message || 'Something went wrong.')
-    }
+function TelegramQRCard() {
+  const [botUsername, setBotUsername] = useState<string>('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    // Fetch bot username from connect API (GET)
+    fetch('/api/telegram/botinfo')
+      .then(r => r.json())
+      .then(d => { if (d.username) setBotUsername(d.username) })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  function qrUrl(depot: string) {
+    if (!botUsername) return ''
+    const link = `https://t.me/${botUsername}?start=join-${depot}`
+    return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(link)}&bgcolor=ffffff&color=000000&margin=10`
   }
 
-  async function handleCopy() {
-    try {
-      await navigator.clipboard.writeText(link)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      setState('error'); setMessage('Could not copy — please copy manually.')
-    }
+  function telegramLink(depot: string) {
+    return botUsername ? `https://t.me/${botUsername}?start=join-${depot}` : '#'
   }
-
-  const isSuccess = state === 'success'
-  const isError = state === 'error'
 
   return (
     <div className="card" style={{ padding: '1.5rem' }}>
       <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '.25rem' }}>
-        Connect Telegram User
+        Telegram QR Codes
       </h3>
-      <p style={{ fontSize: '.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-        Generate a one-click link for a staff member to connect their Telegram. The link expires in
-        <strong style={{ color: 'var(--primary)' }}> 30 minutes</strong> and can only be used once.
+      <p style={{ fontSize: '.8rem', color: 'var(--text-muted)', marginBottom: '1.25rem', lineHeight: 1.6 }}>
+        Staff apne phone se QR scan kare → Telegram khule → naam type kare → Done!
+        <br />
+        <span style={{ color: 'var(--primary)', fontWeight: 600 }}>Har depot ka ek QR print karke laga dein.</span>
       </p>
 
-      <form onSubmit={handleGenerate} style={{ display: 'flex', flexDirection: 'column', gap: '.75rem', maxWidth: '340px' }}>
-        <input
-          type="text"
-          className="input-field"
-          placeholder="Staff name (e.g. Rahul Kumar)"
-          value={name}
-          onChange={e => { setName(e.target.value); if (state !== 'idle') { setState('idle'); setMessage(''); setLink('') } }}
-          required
-        />
-        <select
-          className="input-field"
-          value={depot}
-          onChange={e => setDepot(e.target.value)}
-          style={{ cursor: 'pointer' }}
-        >
-          <option value="ASR">ASR – Amritsar</option>
-          <option value="FZR">FZR – Firozpur</option>
-          <option value="JUC">JUC – Jalandhar</option>
-        </select>
-        <button
-          type="submit"
-          disabled={state === 'loading'}
-          style={{
-            padding: '.45rem 1.25rem', borderRadius: '.375rem',
-            background: 'var(--primary)', color: 'var(--primary-fg)',
-            border: 'none', fontWeight: 600, fontSize: '.875rem',
-            cursor: state === 'loading' ? 'not-allowed' : 'pointer',
-            opacity: state === 'loading' ? .6 : 1,
-            width: 'fit-content',
-          }}
-        >
-          {state === 'loading' ? 'Generating…' : '🔗 Generate Link'}
-        </button>
-      </form>
-
-      {message && (
+      {loading ? (
+        <p style={{ fontSize: '.8rem', color: 'var(--text-muted)' }}>Loading…</p>
+      ) : !botUsername ? (
         <div style={{
-          marginTop: '.75rem', padding: '.6rem .9rem',
-          borderRadius: '.375rem', fontSize: '.8rem',
-          color: isSuccess ? 'var(--pass)' : 'var(--fail)',
-          background: isSuccess ? 'var(--pass-bg)' : 'var(--fail-bg)',
-          border: `1px solid ${isSuccess ? 'var(--pass)' : 'var(--fail)'}`,
-          fontWeight: 600, maxWidth: '340px',
+          padding: '.75rem 1rem', borderRadius: '.375rem',
+          background: 'var(--fail-bg)', border: '1px solid var(--fail)',
+          fontSize: '.8rem', color: 'var(--fail)', fontWeight: 600,
         }}>
-          {isSuccess ? '✅ ' : '❌ '}{message}
+          ❌ Bot username fetch nahi ho saka. Check karein ki TELEGRAM_BOT_TOKEN set hai.
+        </div>
+      ) : (
+        <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap' }}>
+          {DEPOTS.map(d => (
+            <div key={d.key} style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.75rem',
+              padding: '1.25rem', borderRadius: '.625rem',
+              border: `2px solid ${d.color}22`,
+              background: 'var(--bg-card)',
+              minWidth: '160px',
+            }}>
+              <span style={{
+                fontSize: '.7rem', fontWeight: 800, letterSpacing: '.1em',
+                textTransform: 'uppercase', color: d.color,
+                background: `${d.color}18`, padding: '.2rem .7rem',
+                borderRadius: '999px',
+              }}>
+                {d.label}
+              </span>
+
+              <a href={telegramLink(d.key)} target="_blank" rel="noopener noreferrer"
+                title={`Open ${d.key} bot link`}>
+                <img
+                  src={qrUrl(d.key)}
+                  alt={`QR for ${d.key}`}
+                  width={160}
+                  height={160}
+                  style={{ borderRadius: '.375rem', display: 'block', border: `3px solid ${d.color}33` }}
+                />
+              </a>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '.4rem', width: '100%' }}>
+                <a
+                  href={telegramLink(d.key)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '.3rem',
+                    padding: '.35rem .75rem', borderRadius: '.375rem',
+                    background: '#229ED9', color: '#fff',
+                    textDecoration: 'none', fontWeight: 600, fontSize: '.75rem',
+                  }}
+                >
+                  ✈️ Open Link
+                </a>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(telegramLink(d.key)).catch(() => {})
+                  }}
+                  style={{
+                    display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '.3rem',
+                    padding: '.35rem .75rem', borderRadius: '.375rem',
+                    background: 'transparent', color: 'var(--text)',
+                    border: '1.5px solid var(--border)',
+                    fontWeight: 600, fontSize: '.75rem', cursor: 'pointer',
+                  }}
+                >
+                  📋 Copy Link
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
-      {link && (
-        <div style={{
-          marginTop: '1rem',
-          padding: '1rem',
-          borderRadius: '.5rem',
-          background: 'var(--bg-input)',
-          border: '1px solid var(--border)',
-          maxWidth: '480px',
-        }}>
-          <p style={{ fontSize: '.75rem', color: 'var(--text-muted)', marginBottom: '.5rem', fontWeight: 600 }}>
-            Share this link with <strong style={{ color: 'var(--primary)' }}>{name}</strong> ({depot}):
-          </p>
-          <code style={{
-            display: 'block', fontSize: '.7rem',
-            color: 'var(--primary)', wordBreak: 'break-all',
-            marginBottom: '.75rem', lineHeight: 1.5,
-          }}>
-            {link}
-          </code>
-          <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap' }}>
-            <a
-              href={link}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: '.35rem',
-                padding: '.4rem 1rem', borderRadius: '.375rem',
-                background: '#229ED9', color: '#fff',
-                textDecoration: 'none', fontWeight: 600, fontSize: '.8rem',
-              }}
-            >
-              ✈️ Open in Telegram
-            </a>
-            <button
-              onClick={handleCopy}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: '.35rem',
-                padding: '.4rem 1rem', borderRadius: '.375rem',
-                background: copied ? 'var(--pass)' : 'transparent',
-                color: copied ? '#fff' : 'var(--text)',
-                border: '1.5px solid var(--border)',
-                fontWeight: 600, fontSize: '.8rem', cursor: 'pointer',
-                transition: 'all .15s',
-              }}
-            >
-              {copied ? '✅ Copied!' : '📋 Copy Link'}
-            </button>
-          </div>
-        </div>
-      )}
+      <div style={{
+        marginTop: '1.25rem', padding: '.75rem 1rem',
+        borderRadius: '.375rem', background: 'var(--bg-input)',
+        border: '1px solid var(--border)', fontSize: '.75rem',
+        color: 'var(--text-muted)', lineHeight: 1.6,
+      }}>
+        <strong style={{ color: 'var(--text)' }}>Flow:</strong>
+        {' Staff scans QR → Telegram opens → naam type karo → auto-registered as that depot staff ✅'}
+        <br />
+        <strong style={{ color: 'var(--text)' }}>Print tip:</strong>
+        {' Right-click on QR image → "Save Image" → print karo.'}
+      </div>
     </div>
   )
 }
+
 
 export default function SettingsPage() {
   return (
@@ -572,7 +549,7 @@ export default function SettingsPage() {
           }}>
             Telegram Bot
           </h2>
-          <TelegramConnectCard />
+          <TelegramQRCard />
         </section>
 
                 <section>
