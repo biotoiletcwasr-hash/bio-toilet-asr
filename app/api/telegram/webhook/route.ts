@@ -829,13 +829,21 @@ async function handleHelp(chatId: string, user: Record<string, unknown>) {
   const isAdmin = (chatId === adminChatId()) || (user?.role === 'admin')
   let msg =
     `📖 <b>Bio-Toilet Bot — Commands</b>\n━━━━━━━━━━━━━━━━\n\n` +
-    `/coach 258840 — Coach ka status + history\n` +
-    `/due — Due coaches (75-90 days)\n` +
-    `/overdue — Overdue coaches (&gt;90 days)\n` +
-    `/pending — PENDING result entries\n` +
-    `/add — Naya test result enter karein\n` +
-    `/cancel — Current operation cancel\n` +
-    `/myid — Apna Telegram Chat ID dekho\n` +
+    `📋 <b>Test Entries</b>\n` +
+    `/add — Add new test result\n` +
+    `/edit — Edit an existing entry\n` +
+    `/pending — Entries with PENDING result\n\n` +
+    `🔍 <b>Coach Status</b>\n` +
+    `/coach 258840 — Coach status + history\n` +
+    `/due — Coaches due in next 15 days\n` +
+    `/overdue — Overdue coaches (&gt;90 days)\n\n` +
+    `🔗 <b>Registration</b>\n` +
+    `/ASR — Register for Amritsar depot\n` +
+    `/FZR — Register for Firozpur depot\n` +
+    `/JUC — Register for Jalandhar depot\n\n` +
+    `⚙️ <b>Utility</b>\n` +
+    `/cancel — Cancel current operation\n` +
+    `/myid — Your Telegram Chat ID\n` +
     `/help — This list\n`
 
   if (isAdmin) {
