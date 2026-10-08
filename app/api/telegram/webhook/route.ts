@@ -604,16 +604,14 @@ async function handleCallback(cq: {
       date: 'Date (DD-MM-YYYY)', train: 'Train Number', tank: 'Tank Number',
       ph: 'pH value', cod: 'COD value', fcfc: 'FCFC value'
     }
-    await setSession(chatId, 'EDIT_VALUE', { sno: sno2, field: field2 })
-    await answerCallback(callbackQueryId)
-    await send(chatId, `✏️ Entry #${sno2} — <b>${fieldLabels2[field2] || field2}</b>\n\nEnter the new value:`)
+    await setSession(callerId, 'EDIT_VALUE', { sno: sno2, field: field2 })
+    await send(callerId, `✏️ Entry #${sno2} — <b>${fieldLabels2[field2] || field2}</b>\n\nEnter the new value:`)
     return
   }
 
   if (data === 'cancel_edit') {
-    await clearSession(chatId)
-    await answerCallback(callbackQueryId, 'Cancelled ❌')
-    await send(chatId, '❌ Edit cancelled.')
+    await clearSession(callerId)
+    await send(callerId, '❌ Edit cancelled.')
     return
   }
 
