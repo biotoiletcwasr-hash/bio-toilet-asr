@@ -147,9 +147,14 @@ async function handleMessage(msg: {
     return
   }
 
+  // Depot commands work for unregistered users too
+  if (text === '/ASR' || text === '/asr') return handleDepotJoin(chatId, user, 'ASR', firstName)
+  if (text === '/FZR' || text === '/fzr') return handleDepotJoin(chatId, user, 'FZR', firstName)
+  if (text === '/JUC' || text === '/juc') return handleDepotJoin(chatId, user, 'JUC', firstName)
+
   // Not registered
   if (!user) {
-    await send(chatId, '⚠️ Aap registered nahi hain.\n\n/start — registration karein')
+    await send(chatId, '⚠️ You are not registered.\n\nType /ASR, /FZR, or /JUC to register.')
     return
   }
 
@@ -172,12 +177,6 @@ async function handleMessage(msg: {
     await handleAddStart(chatId, user)
   } else if (text === '/users') {
     await handleUsers(chatId, user)
-  } else if (text === '/ASR' || text === '/asr') {
-    await handleDepotJoin(chatId, user, 'ASR', firstName)
-  } else if (text === '/FZR' || text === '/fzr') {
-    await handleDepotJoin(chatId, user, 'FZR', firstName)
-  } else if (text === '/JUC' || text === '/juc') {
-    await handleDepotJoin(chatId, user, 'JUC', firstName)
   } else if (text === '/edit' || text.startsWith('/edit ')) {
     await handleEditStart(chatId, user, text)
   } else if (text === '/help') {
