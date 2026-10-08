@@ -441,13 +441,18 @@ async function handleStep(
       return
     }
 
-    case 'EDIT_SNO': {
-      const sno = parseInt(text)
-      if (isNaN(sno) || sno <= 0) {
-        await send(chatId, '❌ Please enter a valid S.No.')
-        return
+    case 'EDIT_COACH': {
+      // If user is picking a specific S.No from multiple results
+      if (data.pickingFromCoach) {
+        const sno = parseInt(text.replace('#', '').trim())
+        if (isNaN(sno) || sno <= 0) {
+          await send(chatId, '❌ Enter a valid S.No number.')
+          return
+        }
+        await showEntryForEdit(chatId, user, sno)
+      } else {
+        await findEntryByCoach(chatId, user, text.trim())
       }
-      await showEntryForEdit(chatId, user, sno)
       return
     }
 
@@ -874,33 +879,59 @@ async function handleDepotJoin(chatId: string, user: Record<string, unknown> | n
 async function handleEditStart(chatId: string, user: Record<string, unknown> | null, text: string) {
   if (!user?.is_active) { await send(chatId, '❌ Please register first using /start.'); return }
   const parts = text.split(' ')
-  const snoArg = parts[1]?.trim()
-  if (snoArg && /^\d+$/.test(snoArg)) {
-    await showEntryForEdit(chatId, user, parseInt(snoArg))
+  const coachArg = parts[1]?.trim()
+  if (coachArg) {
+    await findEntryByCoach(chatId, user, coachArg)
   } else {
-    await setSession(chatId, 'EDIT_SNO', {})
-    await send(chatId, '✏️ <b>Edit Entry</b>\n\nEnter the S.No of the entry you want to edit:')
+    await setSession(chatId, 'EDIT_COACH', {})
+    await send(chatId, '✏️ <b>Edit Entry</b>\n\nEnter the <b>coach number</b> to search:')
   }
 }
 
-async function showEntryForEdit(chatId: string, user: Record<string, unknown>, sno: number) {
+async function findEntryByCoach(chatId: string, user: Record<string, unknown>, coachNo: string) {
+  const isAdmin = user.role === 'admin'
+  const r = await db.execute({
+    sql: isAdmin
+      ? `SELECT * FROM entries WHERE coach_no = ? ORDER BY test_date DESC LIMIT 5`
+      : `SELECT * FROM entries WHERE coach_no = ? AND depot = ? ORDER BY test_date DESC LIMIT 5`,
+    args: isAdmin ? [coachNo] : [coachNo, String(user.depot ?? '')],
+  })
+  if (!r.rows[0]) {
+    await send(chatId, `❌ No entries found for coach <b>${coachNo}</b>.\n\nCheck the coach number and try again.`)
+    await clearSession(chatId)
+    return
+  }
+  if (r.rows.length === 1) {
+    await showEntryForEdit(chatId, user, r.rows[0].sno as number)
+    return
+  }
+  // Multiple entries — let user pick
+  const list = r.rows.map(row =>
+    `#${row.sno} — ${fmtDate(row.test_date as string)} | Result: ${row.result}`
+  ).join('\n')
+  await setSession(chatId, 'EDIT_COACH', { pickingFromCoach: coachNo })
+  await send(chatId,
+    `🔍 Found ${r.rows.length} entries for coach <b>${coachNo}</b>:\n\n${list}\n\n` +
+    `Reply with the <b>S.No</b> (#) of the entry to edit:`
+  )
+}
+
+async function showEntryForEdit(chatId: string, user: Record<string, unknown>, sno: number | string) {
+  const snoNum = typeof sno === 'string' ? parseInt(sno) : sno
   const isAdmin = user.role === 'admin'
   const r = await db.execute({
     sql: isAdmin
       ? `SELECT * FROM entries WHERE sno = ?`
       : `SELECT * FROM entries WHERE sno = ? AND depot = ?`,
-    args: isAdmin ? [sno] : [sno, String(user.depot ?? "")],
+    args: isAdmin ? [snoNum] : [snoNum, String(user.depot ?? '')],
   })
   if (!r.rows[0]) {
-    await send(chatId,
-      `❌ Entry #${sno} not found.` +
-      (!isAdmin ? '\n(You can only edit entries from your own depot.)' : '')
-    )
+    await send(chatId, `❌ Entry #${snoNum} not found.` + (!isAdmin ? '\n(You can only edit entries from your own depot.)' : ''))
     await clearSession(chatId)
     return
   }
   const e = r.rows[0]
-  await setSession(chatId, 'EDIT_FIELD', { sno: String(sno) })
+  await setSession(chatId, 'EDIT_FIELD', { sno: String(snoNum) })
   await tg('sendMessage', {
     chat_id: chatId,
     text:
