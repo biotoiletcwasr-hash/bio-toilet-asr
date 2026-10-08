@@ -882,7 +882,7 @@ async function showEntryForEdit(chatId: string, user: Record<string, unknown>, s
     sql: isAdmin
       ? `SELECT * FROM entries WHERE sno = ?`
       : `SELECT * FROM entries WHERE sno = ? AND depot = ?`,
-    args: isAdmin ? [sno] : [sno, user.depot],
+    args: isAdmin ? [sno] : [sno, String(user.depot ?? "")],
   })
   if (!r.rows[0]) {
     await send(chatId,
