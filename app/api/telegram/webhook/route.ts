@@ -125,7 +125,7 @@ async function handleMessage(msg: {
   // /cancel — always works
   if (text === '/cancel') {
     await clearSession(chatId)
-    await send(chatId, '❌ Operation cancel ho gaya.\n\n/help — commands list')
+    await send(chatId, '❌ Operation cancelled.\n\n/help — list of commands')
     return
   }
 
@@ -155,7 +155,7 @@ async function handleMessage(msg: {
 
   // Pending approval
   if (!user.is_active) {
-    await send(chatId, '⏳ Aapki request pending hai. Admin approval ka wait karein.')
+    await send(chatId, '⏳ Your registration is pending admin approval.')
     return
   }
 
@@ -172,10 +172,18 @@ async function handleMessage(msg: {
     await handleAddStart(chatId, user)
   } else if (text === '/users') {
     await handleUsers(chatId, user)
+  } else if (text === '/ASR' || text === '/asr') {
+    await handleDepotJoin(chatId, user, 'ASR', firstName)
+  } else if (text === '/FZR' || text === '/fzr') {
+    await handleDepotJoin(chatId, user, 'FZR', firstName)
+  } else if (text === '/JUC' || text === '/juc') {
+    await handleDepotJoin(chatId, user, 'JUC', firstName)
+  } else if (text === '/edit' || text.startsWith('/edit ')) {
+    await handleEditStart(chatId, user, text)
   } else if (text === '/help') {
     await handleHelp(chatId, user)
   } else {
-    await send(chatId, '❓ Command samajh nahi aaya.\n\n/help — commands list')
+    await send(chatId, '❓ Unknown command.\n\n/help — list of commands')
   }
 }
 
@@ -189,9 +197,9 @@ async function handleStart(
   if (existingUser?.is_active) {
     await send(
       chatId,
-      `✅ Aap already registered hain!\n\n` +
+      `✅ You are already registered!\n\n` +
       `👤 <b>${existingUser.name}</b> | ${existingUser.depot} | ${existingUser.role}\n\n` +
-      `/help — commands list`
+      `/help — list of commands`
     )
     return
   }
@@ -209,7 +217,7 @@ async function handleStart(
     await send(
       chatId,
       `📱 <b>Bio-Toilet Test System — ${depot}</b>\n\n` +
-      `Registration ke liye apna <b>poora naam</b> type karein:`
+      `Please type your <b>full name</b> to register:`
     )
     return
   }
@@ -239,16 +247,16 @@ async function handleStart(
         chatId,
         `🎉 <b>Connected!</b>\n\n` +
         `👤 <b>${td.name}</b> | ${td.depot}\n\n` +
-        `Ab aap bot use kar sakte hain.\n/help — commands list`
+        `You can now use the bot.\n/help — list of commands`
       )
       const admin = adminChatId()
       if (admin && admin !== chatId) {
-        await send(admin, `✅ <b>${td.name}</b> (${td.depot}) app se connect ho gaya! 📱`)
+        await send(admin, `✅ <b>${td.name}</b> (${td.depot}) connected via app link! 📱`)
       }
       return
     } else {
       await send(chatId,
-        `❌ Link expired ho gaya ya already use ho chuka hai.\n\nAdmin se naya link maango.`
+        `❌ This link has expired or has already been used.\n\nPlease ask the admin for a new link.`
       )
       return
     }
@@ -263,8 +271,8 @@ async function handleStart(
   await setSession(chatId, 'REG_NAME', { firstName })
   await send(
     chatId,
-    `🙏 <b>Bio-Toilet Test System</b> mein aapka swagat hai!\n\n` +
-    `Registration ke liye apna <b>poora naam</b> type karein:`
+    `🙏 <b>Bio-Toilet Test System</b>!\n\n` +
+    `Please type your <b>full name</b> to register:`
   )
 }
 
@@ -284,7 +292,7 @@ async function handleStep(
       // Staff scanned QR code — they typed their name
       const name = text.trim()
       if (!name || name.length < 2) {
-        await send(chatId, '❌ Valid naam type karein (kam se kam 2 characters).')
+        await send(chatId, '❌ Please enter a valid name (at least 2 characters).')
         return
       }
       const depot = data.depot || 'ASR'
@@ -298,11 +306,11 @@ async function handleStep(
         chatId,
         `🎉 <b>Connected!</b>\n\n` +
         `👤 <b>${name}</b> | ${depot} | Staff\n\n` +
-        `Ab aap bot use kar sakte hain.\n/help — commands list`
+        `You can now use the bot.\n/help — list of commands`
       )
       const admin = adminChatId()
       if (admin && admin !== chatId) {
-        await send(admin, `✅ <b>${name}</b> (${depot}) QR scan se connect ho gaya! 📱`)
+        await send(admin, `✅ <b>${name}</b> (${depot}) connected via QR scan! 📱`)
       }
       return
     }
@@ -313,7 +321,7 @@ async function handleStep(
         return
       }
       await setSession(chatId, 'REG_DEPOT', { ...data, name: text })
-      await send(chatId, `✅ Naam: <b>${text}</b>\n\nApna depot select karein:`, {
+      await send(chatId, `✅ Naam: <b>${text}</b>\n\nPlease select your depot:`, {
         reply_markup: {
           inline_keyboard: [[
             { text: '🏭 ASR', callback_data: `depot:ASR:${chatId}` },
@@ -396,7 +404,7 @@ async function handleStep(
       if (text !== '/skip') {
         const fcfc = parseFloat(text)
         if (isNaN(fcfc)) {
-          await send(chatId, '⚠️ Valid FCFC likhein ya /skip karein:')
+          await send(chatId, '⚠️ Enter a valid FCFC value or /skip:')
           return
         }
         fcfcVal = String(fcfc)
@@ -410,7 +418,7 @@ async function handleStep(
       const rEmoji = result === 'PASS' ? '✅' : result === 'FAIL' ? '❌' : '⏳'
 
       const confirmMsg =
-        `📋 <b>Entry Confirm karein:</b>\n\n` +
+        `📋 <b>Confirm Entry:</b>\n\n` +
         `Coach: <b>${data.coach_no}</b>\n` +
         `Date:  <b>${fmtDate(data.date)}</b>\n` +
         `Train: <b>${data.train_no}</b>\n` +
@@ -420,7 +428,7 @@ async function handleStep(
         `FCFC:  <b>${fcfcVal || '—'}</b>\n` +
         `Result:${rEmoji} <b>${result}</b>\n` +
         `Depot: <b>${depot}</b>\n\n` +
-        `Save karein?`
+        `Save this entry?`
 
       await setSession(chatId, 'ADD_CONFIRM', { ...data, fcfc: fcfcVal, result, depot })
       await send(chatId, confirmMsg, {
@@ -434,9 +442,70 @@ async function handleStep(
       return
     }
 
+    case 'EDIT_SNO': {
+      const sno = parseInt(text)
+      if (isNaN(sno) || sno <= 0) {
+        await send(chatId, '❌ Please enter a valid S.No.')
+        return
+      }
+      await showEntryForEdit(chatId, user, sno)
+      return
+    }
+
+    case 'EDIT_VALUE': {
+      const { sno: snoStr, field } = data
+      let value: string | number = text.trim()
+      let dbField = ''
+      const fieldLabels: Record<string, string> = {
+        date: 'Date', train: 'Train No', tank: 'Tank No', ph: 'pH', cod: 'COD', fcfc: 'FCFC'
+      }
+      switch (field) {
+        case 'date': {
+          const normalized = normalizeDate(value as string)
+          if (!normalized) { await send(chatId, '❌ Invalid date. Use DD-MM-YYYY.'); return }
+          value = normalized; dbField = 'test_date'; break
+        }
+        case 'train': { dbField = 'train_no'; break }
+        case 'tank':  { dbField = 'tank_no'; break }
+        case 'ph': {
+          value = parseFloat(value as string)
+          if (isNaN(value as number)) { await send(chatId, '❌ Enter a valid pH value (e.g. 7.2)'); return }
+          dbField = 'ph'; break
+        }
+        case 'cod': {
+          value = parseFloat(value as string)
+          if (isNaN(value as number)) { await send(chatId, '❌ Enter a valid COD value'); return }
+          dbField = 'cod'; break
+        }
+        case 'fcfc': {
+          value = parseFloat(value as string)
+          if (isNaN(value as number)) { await send(chatId, '❌ Enter a valid FCFC value'); return }
+          dbField = 'fcfc'; break
+        }
+        default: { await send(chatId, '❌ Invalid field.'); await clearSession(chatId); return }
+      }
+      const entryR = await db.execute({ sql: `SELECT ph, cod, fcfc FROM entries WHERE sno = ?`, args: [snoStr] })
+      const ent = entryR.rows[0]
+      const newPh   = field === 'ph'   ? (value as number) : (ent?.ph   as number | null)
+      const newCod  = field === 'cod'  ? (value as number) : (ent?.cod  as number | null)
+      const newFcfc = field === 'fcfc' ? (value as number) : (ent?.fcfc as number | null)
+      const newResult = calculateResult(newPh, newCod, newFcfc)
+      await db.execute({
+        sql: `UPDATE entries SET ${dbField} = ?, result = ? WHERE sno = ?`,
+        args: [value, newResult, snoStr],
+      })
+      await clearSession(chatId)
+      await send(chatId,
+        `✅ <b>Entry #${snoStr} updated!</b>\n\n` +
+        `${fieldLabels[field] || field}: <b>${field === 'date' ? fmtDate(value as string) : value}</b>\n` +
+        `Result: <b>${newResult}</b>`
+      )
+      return
+    }
+
     default:
       await clearSession(chatId)
-      await send(chatId, '❓ Kuch issue hua. /help se retry karein.')
+      await send(chatId, '❓ Something went wrong. Type /help to try again.')
   }
 }
 
@@ -505,8 +574,8 @@ async function handleCallback(cq: {
     await send(callerId, `✅ <b>${u?.name}</b> (${u?.depot}) approve ho gaya!`)
     await send(targetId,
       `🎉 <b>Registration approved!</b>\n\n` +
-      `Ab aap bot use kar sakte hain.\n\n` +
-      `/help — commands list`
+      `You can now use the bot.\n\n` +
+      `/help — list of commands`
     )
     return
   }
@@ -527,6 +596,27 @@ async function handleCallback(cq: {
   }
 
   // Save entry (from ADD_CONFIRM step)
+  if (data.startsWith('edit_f:')) {
+    const parts2 = data.split(':')
+    const sno2 = parts2[1]
+    const field2 = parts2[2]
+    const fieldLabels2: Record<string, string> = {
+      date: 'Date (DD-MM-YYYY)', train: 'Train Number', tank: 'Tank Number',
+      ph: 'pH value', cod: 'COD value', fcfc: 'FCFC value'
+    }
+    await setSession(chatId, 'EDIT_VALUE', { sno: sno2, field: field2 })
+    await answerCallback(callbackQueryId)
+    await send(chatId, `✏️ Entry #${sno2} — <b>${fieldLabels2[field2] || field2}</b>\n\nEnter the new value:`)
+    return
+  }
+
+  if (data === 'cancel_edit') {
+    await clearSession(chatId)
+    await answerCallback(callbackQueryId, 'Cancelled ❌')
+    await send(chatId, '❌ Edit cancelled.')
+    return
+  }
+
   if (data.startsWith('save:')) {
     const [, userChatId] = data.split(':')
     if (callerId !== userChatId) return
@@ -714,7 +804,7 @@ async function handleAddStart(chatId: string, user: Record<string, unknown>) {
 async function handleUsers(chatId: string, user: Record<string, unknown>) {
   const isAdmin = (chatId === adminChatId()) || (user?.role === 'admin')
   if (!isAdmin) {
-    await send(chatId, '⚠️ Sirf admin yeh command use kar sakta hai.')
+    await send(chatId, '⚠️ This command is for admin only.')
     return
   }
 
@@ -724,7 +814,7 @@ async function handleUsers(chatId: string, user: Record<string, unknown>) {
   })
 
   if (!r.rows.length) {
-    await send(chatId, '👥 Koi registered user nahi.')
+    await send(chatId, '👥 No registered users found.')
     return
   }
 
@@ -749,11 +839,94 @@ async function handleHelp(chatId: string, user: Record<string, unknown>) {
     `/add — Naya test result enter karein\n` +
     `/cancel — Current operation cancel\n` +
     `/myid — Apna Telegram Chat ID dekho\n` +
-    `/help — Yeh list\n`
+    `/help — This list\n`
 
   if (isAdmin) {
-    msg += `\n🔑 <b>Admin Commands:</b>\n/users — Registered users list\n`
+    msg += `\n🔑 <b>Admin Commands:</b>\n/users — List of registered users\n`
   }
 
   await send(chatId, msg)
 }
+
+// ── Depot join via /ASR /FZR /JUC ───────────────────────────────────────────
+async function handleDepotJoin(chatId: string, user: Record<string, unknown> | null, depot: string, firstName: string) {
+  if (user?.is_active) {
+    await send(chatId,
+      `✅ You are already registered!\n\n` +
+      `👤 <b>${user.name}</b> | ${user.depot}\n\n` +
+      `To change your depot, please contact the admin.`
+    )
+    return
+  }
+  await setSession(chatId, 'QR_NAME', { depot, firstName })
+  await send(chatId,
+    `📍 <b>${depot} Depot</b> selected!\n\n` +
+    `Please type your <b>full name</b>:`
+  )
+}
+
+// ── /edit entry ──────────────────────────────────────────────────────────────
+async function handleEditStart(chatId: string, user: Record<string, unknown> | null, text: string) {
+  if (!user?.is_active) { await send(chatId, '❌ Please register first using /start.'); return }
+  const parts = text.split(' ')
+  const snoArg = parts[1]?.trim()
+  if (snoArg && /^\d+$/.test(snoArg)) {
+    await showEntryForEdit(chatId, user, parseInt(snoArg))
+  } else {
+    await setSession(chatId, 'EDIT_SNO', {})
+    await send(chatId, '✏️ <b>Edit Entry</b>\n\nEnter the S.No of the entry you want to edit:')
+  }
+}
+
+async function showEntryForEdit(chatId: string, user: Record<string, unknown>, sno: number) {
+  const isAdmin = user.role === 'admin'
+  const r = await db.execute({
+    sql: isAdmin
+      ? `SELECT * FROM entries WHERE sno = ?`
+      : `SELECT * FROM entries WHERE sno = ? AND depot = ?`,
+    args: isAdmin ? [sno] : [sno, user.depot],
+  })
+  if (!r.rows[0]) {
+    await send(chatId,
+      `❌ Entry #${sno} not found.` +
+      (!isAdmin ? '\n(You can only edit entries from your own depot.)' : '')
+    )
+    await clearSession(chatId)
+    return
+  }
+  const e = r.rows[0]
+  await setSession(chatId, 'EDIT_FIELD', { sno: String(sno) })
+  await tg('sendMessage', {
+    chat_id: chatId,
+    text:
+      `✏️ <b>Entry #${e.sno}</b>\n\n` +
+      `📅 Date: <b>${fmtDate(e.test_date as string)}</b>\n` +
+      `🚂 Train: <b>${e.train_no || '—'}</b>\n` +
+      `🚃 Coach: <b>${e.coach_no}</b>\n` +
+      `🪣 Tank: <b>${e.tank_no || '—'}</b>\n` +
+      `⚗️ pH: <b>${e.ph ?? '—'}</b>\n` +
+      `💧 COD: <b>${e.cod ?? '—'}</b>\n` +
+      `🧫 FCFC: <b>${e.fcfc ?? '—'}</b>\n` +
+      `📊 Result: <b>${e.result}</b>\n\n` +
+      `What would you like to edit?`,
+    parse_mode: 'HTML',
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: '📅 Date',  callback_data: `edit_f:${sno}:date` },
+          { text: '🚂 Train', callback_data: `edit_f:${sno}:train` },
+        ],
+        [
+          { text: '🪣 Tank',  callback_data: `edit_f:${sno}:tank` },
+          { text: '⚗️ pH',   callback_data: `edit_f:${sno}:ph` },
+        ],
+        [
+          { text: '💧 COD',  callback_data: `edit_f:${sno}:cod` },
+          { text: '🧫 FCFC', callback_data: `edit_f:${sno}:fcfc` },
+        ],
+        [{ text: '❌ Cancel', callback_data: 'cancel_edit' }],
+      ],
+    },
+  })
+}
+

@@ -326,124 +326,131 @@ const DEPOTS = [
 
 function TelegramQRCard() {
   const [botUsername, setBotUsername] = useState<string>('')
-  const [loading, setLoading] = useState(true)
+  const [showQR, setShowQR] = useState(false)
 
   useEffect(() => {
-    // Fetch bot username from connect API (GET)
     fetch('/api/telegram/botinfo')
       .then(r => r.json())
       .then(d => { if (d.username) setBotUsername(d.username) })
       .catch(() => {})
-      .finally(() => setLoading(false))
   }, [])
 
-  function qrUrl(depot: string) {
-    if (!botUsername) return ''
-    const link = `https://t.me/${botUsername}?start=join-${depot}`
-    return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(link)}&bgcolor=ffffff&color=000000&margin=10`
-  }
-
-  function telegramLink(depot: string) {
-    return botUsername ? `https://t.me/${botUsername}?start=join-${depot}` : '#'
-  }
+  const genericLink = botUsername ? `https://t.me/${botUsername}` : '#'
+  const qrUrl = botUsername
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(genericLink)}&bgcolor=ffffff&color=000000&margin=12`
+    : ''
 
   return (
     <div className="card" style={{ padding: '1.5rem' }}>
       <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '.25rem' }}>
-        Telegram QR Codes
+        Connect to Telegram
       </h3>
       <p style={{ fontSize: '.8rem', color: 'var(--text-muted)', marginBottom: '1.25rem', lineHeight: 1.6 }}>
-        Staff apne phone se QR scan kare → Telegram khule → naam type kare → Done!
-        <br />
-        <span style={{ color: 'var(--primary)', fontWeight: 600 }}>Har depot ka ek QR print karke laga dein.</span>
+        Share this with staff to connect their Telegram account to the bot.
       </p>
 
-      {loading ? (
-        <p style={{ fontSize: '.8rem', color: 'var(--text-muted)' }}>Loading…</p>
-      ) : !botUsername ? (
-        <div style={{
-          padding: '.75rem 1rem', borderRadius: '.375rem',
-          background: 'var(--fail-bg)', border: '1px solid var(--fail)',
-          fontSize: '.8rem', color: 'var(--fail)', fontWeight: 600,
-        }}>
-          ❌ Bot username fetch nahi ho saka. Check karein ki TELEGRAM_BOT_TOKEN set hai.
-        </div>
+      {!showQR ? (
+        <button
+          onClick={() => setShowQR(true)}
+          disabled={!botUsername}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: '.5rem',
+            padding: '.6rem 1.5rem', borderRadius: '.5rem',
+            background: botUsername ? '#229ED9' : 'var(--border)',
+            color: '#fff', border: 'none',
+            fontWeight: 700, fontSize: '.9rem',
+            cursor: botUsername ? 'pointer' : 'not-allowed',
+            transition: 'opacity .15s',
+          }}
+        >
+          ✈️ {botUsername ? 'Connect to Telegram' : 'Loading…'}
+        </button>
       ) : (
-        <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap' }}>
-          {DEPOTS.map(d => (
-            <div key={d.key} style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.75rem',
-              padding: '1.25rem', borderRadius: '.625rem',
-              border: `2px solid ${d.color}22`,
-              background: 'var(--bg-card)',
-              minWidth: '160px',
-            }}>
-              <span style={{
-                fontSize: '.7rem', fontWeight: 800, letterSpacing: '.1em',
-                textTransform: 'uppercase', color: d.color,
-                background: `${d.color}18`, padding: '.2rem .7rem',
-                borderRadius: '999px',
-              }}>
-                {d.label}
-              </span>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '1rem' }}>
+          {qrUrl && (
+            <a href={genericLink} target="_blank" rel="noopener noreferrer" title="Open bot link">
+              <img
+                src={qrUrl}
+                alt="Telegram Bot QR Code"
+                width={180}
+                height={180}
+                style={{ borderRadius: '.5rem', display: 'block', border: '3px solid #229ED933' }}
+              />
+            </a>
+          )}
 
-              <a href={telegramLink(d.key)} target="_blank" rel="noopener noreferrer"
-                title={`Open ${d.key} bot link`}>
-                <img
-                  src={qrUrl(d.key)}
-                  alt={`QR for ${d.key}`}
-                  width={160}
-                  height={160}
-                  style={{ borderRadius: '.375rem', display: 'block', border: `3px solid ${d.color}33` }}
-                />
-              </a>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '.4rem', width: '100%' }}>
-                <a
-                  href={telegramLink(d.key)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '.3rem',
-                    padding: '.35rem .75rem', borderRadius: '.375rem',
-                    background: '#229ED9', color: '#fff',
-                    textDecoration: 'none', fontWeight: 600, fontSize: '.75rem',
-                  }}
-                >
-                  ✈️ Open Link
-                </a>
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(telegramLink(d.key)).catch(() => {})
-                  }}
-                  style={{
-                    display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '.3rem',
-                    padding: '.35rem .75rem', borderRadius: '.375rem',
-                    background: 'transparent', color: 'var(--text)',
-                    border: '1.5px solid var(--border)',
-                    fontWeight: 600, fontSize: '.75rem', cursor: 'pointer',
-                  }}
-                >
-                  📋 Copy Link
-                </button>
-              </div>
+          <div style={{
+            padding: '1rem 1.1rem',
+            borderRadius: '.5rem',
+            background: 'var(--bg-input)',
+            border: '1px solid var(--border)',
+            fontSize: '.82rem',
+            lineHeight: 1.9,
+            maxWidth: '340px',
+          }}>
+            <strong style={{ color: 'var(--text)', display: 'block', marginBottom: '.4rem' }}>
+              Steps for staff:
+            </strong>
+            <span style={{ color: 'var(--text-muted)' }}>
+              1️⃣ Scan the QR code (or open the link)<br />
+              2️⃣ In Telegram, type your depot command:
+            </span>
+            <div style={{ display: 'flex', gap: '.4rem', margin: '.5rem 0', flexWrap: 'wrap' }}>
+              {(['ASR', 'FZR', 'JUC'] as const).map(d => (
+                <code key={d} style={{
+                  padding: '.2rem .65rem', borderRadius: '.3rem',
+                  background: 'var(--primary)', color: 'var(--primary-fg)',
+                  fontWeight: 700, fontSize: '.85rem',
+                }}>
+                  /{d}
+                </code>
+              ))}
             </div>
-          ))}
+            <span style={{ color: 'var(--text-muted)' }}>
+              3️⃣ Type your full name → ✅ Connected!
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap' }}>
+            <a
+              href={genericLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '.35rem',
+                padding: '.4rem 1rem', borderRadius: '.375rem',
+                background: '#229ED9', color: '#fff',
+                textDecoration: 'none', fontWeight: 600, fontSize: '.8rem',
+              }}
+            >
+              ✈️ Open Bot Link
+            </a>
+            <button
+              onClick={() => navigator.clipboard.writeText(genericLink).catch(() => {})}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '.35rem',
+                padding: '.4rem 1rem', borderRadius: '.375rem',
+                background: 'transparent', color: 'var(--text)',
+                border: '1.5px solid var(--border)',
+                fontWeight: 600, fontSize: '.8rem', cursor: 'pointer',
+              }}
+            >
+              📋 Copy Link
+            </button>
+            <button
+              onClick={() => setShowQR(false)}
+              style={{
+                padding: '.4rem .75rem', borderRadius: '.375rem',
+                background: 'transparent', color: 'var(--text-muted)',
+                border: '1px solid var(--border)',
+                fontSize: '.75rem', cursor: 'pointer',
+              }}
+            >
+              ✕ Close
+            </button>
+          </div>
         </div>
       )}
-
-      <div style={{
-        marginTop: '1.25rem', padding: '.75rem 1rem',
-        borderRadius: '.375rem', background: 'var(--bg-input)',
-        border: '1px solid var(--border)', fontSize: '.75rem',
-        color: 'var(--text-muted)', lineHeight: 1.6,
-      }}>
-        <strong style={{ color: 'var(--text)' }}>Flow:</strong>
-        {' Staff scans QR → Telegram opens → naam type karo → auto-registered as that depot staff ✅'}
-        <br />
-        <strong style={{ color: 'var(--text)' }}>Print tip:</strong>
-        {' Right-click on QR image → "Save Image" → print karo.'}
-      </div>
     </div>
   )
 }
