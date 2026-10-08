@@ -472,10 +472,10 @@ async function handleStep(
         case 'date': {
           const normalized = normalizeDate(value as string)
           if (!normalized) { await send(chatId, '❌ Invalid date. Use DD-MM-YYYY.'); return }
-          value = normalized; dbField = 'test_date'; break
+          value = normalized; dbField = 'date'; break
         }
         case 'train': { dbField = 'train_no'; break }
-        case 'tank':  { dbField = 'tank_no'; break }
+        case 'tank':  { dbField = 'bio_tank_no'; break }
         case 'ph': {
           value = parseFloat(value as string)
           if (isNaN(value as number)) { await send(chatId, '❌ Enter a valid pH value (e.g. 7.2)'); return }
@@ -493,14 +493,14 @@ async function handleStep(
         }
         default: { await send(chatId, '❌ Invalid field.'); await clearSession(chatId); return }
       }
-      const entryR = await db.execute({ sql: `SELECT ph, cod, fcfc FROM entries WHERE sno = ?`, args: [parseInt(snoStr)] })
+      const entryR = await db.execute({ sql: `SELECT ph, cod, fcfc FROM bio_test_entries WHERE s_no = ?`, args: [parseInt(snoStr)] })
       const ent = entryR.rows[0]
       const newPh   = field === 'ph'   ? (value as number) : (ent?.ph   as number | null)
       const newCod  = field === 'cod'  ? (value as number) : (ent?.cod  as number | null)
       const newFcfc = field === 'fcfc' ? (value as number) : (ent?.fcfc as number | null)
       const newResult = calculateResult(newPh, newCod, newFcfc)
       await db.execute({
-        sql: `UPDATE entries SET ${dbField} = ?, result = ? WHERE sno = ?`,
+        sql: `UPDATE bio_test_entries SET ${dbField} = ?, result = ? WHERE s_no = ?`,
         args: [value, newResult, snoStr],
       })
       await clearSession(chatId)
@@ -881,8 +881,8 @@ async function handleDepotJoin(chatId: string, user: Record<string, unknown> | n
 // ── Depot summary (/ASR /FZR /JUC for registered users) ─────────────────────
 async function showDepotSummary(chatId: string, depot: string) {
   const [totalR, pendingR, overdueR, dueR] = await Promise.all([
-    db.execute({ sql: `SELECT COUNT(*) as cnt FROM entries WHERE depot = ?`, args: [depot] }),
-    db.execute({ sql: `SELECT COUNT(*) as cnt FROM entries WHERE depot = ? AND result = 'PENDING'`, args: [depot] }),
+    db.execute({ sql: `SELECT COUNT(*) as cnt FROM bio_test_entries WHERE UPPER(depot) = UPPER( = ?`, args: [depot] }),
+    db.execute({ sql: `SELECT COUNT(*) as cnt FROM bio_test_entries WHERE UPPER(depot) = UPPER( = ? AND result = 'PENDING'`, args: [depot] }),
     db.execute({
       sql: `SELECT COUNT(*) as cnt FROM coaches c
             WHERE c.depot = ?
@@ -932,8 +932,8 @@ async function findEntryByCoach(chatId: string, user: Record<string, unknown>, c
   const isAdmin = (user?.role ?? '') === 'admin'
   const r = await db.execute({
     sql: isAdmin
-      ? `SELECT * FROM entries WHERE coach_no = ? ORDER BY test_date DESC LIMIT 5`
-      : `SELECT * FROM entries WHERE coach_no = ? AND depot = ? ORDER BY test_date DESC LIMIT 5`,
+      ? `SELECT * FROM bio_test_entries WHERE coach_no = ? ORDER BY date DESC LIMIT 5`
+      : `SELECT * FROM bio_test_entries WHERE coach_no = ? AND UPPER(depot) = UPPER(?) ORDER BY date DESC LIMIT 5`,
     args: isAdmin ? [coachNo] : [coachNo, String(user.depot ?? '')],
   })
   if (!r.rows[0]) {
@@ -942,12 +942,12 @@ async function findEntryByCoach(chatId: string, user: Record<string, unknown>, c
     return
   }
   if (r.rows.length === 1) {
-    await showEntryForEdit(chatId, user, r.rows[0].sno as number)
+    await showEntryForEdit(chatId, user, r.rows[0].s_no as number)
     return
   }
   // Multiple entries — let user pick
   const list = r.rows.map(row =>
-    `#${row.sno} — ${fmtDate(row.test_date as string)} | Result: ${row.result}`
+    `#${row.sno} — ${fmtDate(row.date as string)} | Result: ${row.result}`
   ).join('\n')
   await setSession(chatId, 'EDIT_COACH', { pickingFromCoach: coachNo })
   await send(chatId,
@@ -961,8 +961,8 @@ async function showEntryForEdit(chatId: string, user: Record<string, unknown>, s
   const isAdmin = (user?.role ?? '') === 'admin'
   const r = await db.execute({
     sql: isAdmin
-      ? `SELECT * FROM entries WHERE sno = ?`
-      : `SELECT * FROM entries WHERE sno = ? AND depot = ?`,
+      ? `SELECT * FROM bio_test_entries WHERE s_no = ?`
+      : `SELECT * FROM bio_test_entries WHERE s_no = ? AND depot = ?`,
     args: isAdmin ? [snoNum] : [snoNum, String(user.depot ?? '')],
   })
   if (!r.rows[0]) {
@@ -976,10 +976,10 @@ async function showEntryForEdit(chatId: string, user: Record<string, unknown>, s
     chat_id: chatId,
     text:
       `✏️ <b>Entry #${e.sno}</b>\n\n` +
-      `📅 Date: <b>${fmtDate(e.test_date as string)}</b>\n` +
+      `📅 Date: <b>${fmtDate(e.date as string)}</b>\n` +
       `🚂 Train: <b>${e.train_no || '—'}</b>\n` +
       `🚃 Coach: <b>${e.coach_no}</b>\n` +
-      `🪣 Tank: <b>${e.tank_no || '—'}</b>\n` +
+      `🪣 Tank: <b>${e.bio_tank_no || '—'}</b>\n` +
       `⚗️ pH: <b>${e.ph ?? '—'}</b>\n` +
       `💧 COD: <b>${e.cod ?? '—'}</b>\n` +
       `🧫 FCFC: <b>${e.fcfc ?? '—'}</b>\n` +
