@@ -947,7 +947,7 @@ async function findEntryByCoach(chatId: string, user: Record<string, unknown>, c
   }
   // Multiple entries — let user pick
   const list = r.rows.map(row =>
-    `#${row.sno} — ${fmtDate(row.date as string)} | Result: ${row.result}`
+    `#${row.s_no} — ${fmtDate(row.date as string)} | Result: ${row.result}`
   ).join('\n')
   await setSession(chatId, 'EDIT_COACH', { pickingFromCoach: coachNo })
   await send(chatId,
