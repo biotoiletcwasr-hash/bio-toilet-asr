@@ -842,10 +842,10 @@ async function handleHelp(chatId: string, user: Record<string, unknown>) {
     `/coach 258840 — Coach status + history\n` +
     `/due — Coaches due in next 15 days\n` +
     `/overdue — Overdue coaches (&gt;90 days)\n\n` +
-    `🔗 <b>Registration</b>\n` +
-    `/ASR — Register for Amritsar depot\n` +
-    `/FZR — Register for Firozpur depot\n` +
-    `/JUC — Register for Jalandhar depot\n\n` +
+    `🏭 <b>Depot Summary</b>\n` +
+    `/ASR — Amritsar depot summary\n` +
+    `/FZR — Firozpur depot summary\n` +
+    `/JUC — Jalandhar depot summary\n\n` +
     `⚙️ <b>Utility</b>\n` +
     `/cancel — Cancel current operation\n` +
     `/myid — Your Telegram Chat ID\n` +
@@ -860,18 +860,53 @@ async function handleHelp(chatId: string, user: Record<string, unknown>) {
 
 // ── Depot join via /ASR /FZR /JUC ───────────────────────────────────────────
 async function handleDepotJoin(chatId: string, user: Record<string, unknown> | null, depot: string, firstName: string) {
+  // Registered users — show depot summary
   if (user?.is_active) {
-    await send(chatId,
-      `✅ You are already registered!\n\n` +
-      `👤 <b>${user.name}</b> | ${user.depot}\n\n` +
-      `To change your depot, please contact the admin.`
-    )
+    await showDepotSummary(chatId, depot)
     return
   }
+  // Unregistered — start registration
   await setSession(chatId, 'QR_NAME', { depot, firstName })
   await send(chatId,
     `📍 <b>${depot} Depot</b> selected!\n\n` +
     `Please type your <b>full name</b>:`
+  )
+}
+
+// ── Depot summary (/ASR /FZR /JUC for registered users) ─────────────────────
+async function showDepotSummary(chatId: string, depot: string) {
+  const [totalR, pendingR, overdueR, dueR] = await Promise.all([
+    db.execute({ sql: `SELECT COUNT(*) as cnt FROM entries WHERE depot = ?`, args: [depot] }),
+    db.execute({ sql: `SELECT COUNT(*) as cnt FROM entries WHERE depot = ? AND result = 'PENDING'`, args: [depot] }),
+    db.execute({
+      sql: `SELECT COUNT(*) as cnt FROM coaches c
+            WHERE c.depot = ?
+            AND (SELECT MAX(test_date) FROM entries e WHERE e.coach_no = c.coach_no) < date('now','-90 days')`,
+      args: [depot],
+    }),
+    db.execute({
+      sql: `SELECT COUNT(*) as cnt FROM coaches c
+            WHERE c.depot = ?
+            AND (SELECT MAX(test_date) FROM entries e WHERE e.coach_no = c.coach_no) BETWEEN date('now','-90 days') AND date('now','-75 days')`,
+      args: [depot],
+    }),
+  ])
+
+  const total   = totalR.rows[0]?.cnt   ?? 0
+  const pending = pendingR.rows[0]?.cnt ?? 0
+  const overdue = overdueR.rows[0]?.cnt ?? 0
+  const due     = dueR.rows[0]?.cnt     ?? 0
+
+  await send(chatId,
+    `🏭 <b>${depot} Depot — Summary</b>\n` +
+    `━━━━━━━━━━━━━━━━\n\n` +
+    `📊 Total entries:  <b>${total}</b>\n` +
+    `⏳ Pending results: <b>${pending}</b>\n` +
+    `📅 Due soon (75-90 days): <b>${due}</b>\n` +
+    `⚠️ Overdue (&gt;90 days): <b>${overdue}</b>\n\n` +
+    `/due — See due list\n` +
+    `/overdue — See overdue list\n` +
+    `/pending — See pending entries`
   )
 }
 
