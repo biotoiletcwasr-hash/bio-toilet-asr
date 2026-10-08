@@ -442,6 +442,11 @@ async function handleStep(
     }
 
     case 'EDIT_COACH': {
+      if (!user?.is_active) {
+        await send(chatId, '❌ Please register first using /start.')
+        await clearSession(chatId)
+        return
+      }
       // If user is picking a specific S.No from multiple results
       if (data.pickingFromCoach) {
         const sno = parseInt(text.replace('#', '').trim())
@@ -488,7 +493,7 @@ async function handleStep(
         }
         default: { await send(chatId, '❌ Invalid field.'); await clearSession(chatId); return }
       }
-      const entryR = await db.execute({ sql: `SELECT ph, cod, fcfc FROM entries WHERE sno = ?`, args: [snoStr] })
+      const entryR = await db.execute({ sql: `SELECT ph, cod, fcfc FROM entries WHERE sno = ?`, args: [parseInt(snoStr)] })
       const ent = entryR.rows[0]
       const newPh   = field === 'ph'   ? (value as number) : (ent?.ph   as number | null)
       const newCod  = field === 'cod'  ? (value as number) : (ent?.cod  as number | null)
@@ -924,7 +929,7 @@ async function handleEditStart(chatId: string, user: Record<string, unknown> | n
 }
 
 async function findEntryByCoach(chatId: string, user: Record<string, unknown>, coachNo: string) {
-  const isAdmin = user.role === 'admin'
+  const isAdmin = (user?.role ?? '') === 'admin'
   const r = await db.execute({
     sql: isAdmin
       ? `SELECT * FROM entries WHERE coach_no = ? ORDER BY test_date DESC LIMIT 5`
@@ -953,7 +958,7 @@ async function findEntryByCoach(chatId: string, user: Record<string, unknown>, c
 
 async function showEntryForEdit(chatId: string, user: Record<string, unknown>, sno: number | string) {
   const snoNum = typeof sno === 'string' ? parseInt(sno) : sno
-  const isAdmin = user.role === 'admin'
+  const isAdmin = (user?.role ?? '') === 'admin'
   const r = await db.execute({
     sql: isAdmin
       ? `SELECT * FROM entries WHERE sno = ?`
