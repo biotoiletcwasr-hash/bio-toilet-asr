@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import EntryForm from '@/components/EntryForm'
 import DataTable from '@/components/DataTable'
@@ -60,6 +60,7 @@ export default function Home() {
             </div>
           </Link>
           <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem' }}>
+            <TelegramConnectButton />
             <Link
               href="/settings"
               style={{
@@ -187,6 +188,117 @@ export default function Home() {
         </a>
       </footer>
     </div>
+  )
+}
+
+function TelegramConnectButton() {
+  const [open, setOpen] = useState(false)
+  const [botUsername, setBotUsername] = useState('')
+
+  useEffect(() => {
+    fetch('/api/telegram/botinfo')
+      .then(r => r.json())
+      .then(d => { if (d.username) setBotUsername(d.username) })
+      .catch(() => {})
+  }, [])
+
+  const link = botUsername ? `https://t.me/${botUsername}` : '#'
+  const qrUrl = botUsername
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(link)}&bgcolor=ffffff&color=000000&margin=10`
+    : ''
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        title="Connect to Telegram"
+        style={{
+          display: 'flex', alignItems: 'center', gap: '.35rem',
+          background: '#229ED9', color: '#fff',
+          border: 'none', borderRadius: '.375rem',
+          padding: '.35rem .65rem', fontSize: '.85rem',
+          fontWeight: 600, cursor: 'pointer',
+          transition: 'opacity .15s',
+        }}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.941z"/>
+        </svg>
+        Telegram
+      </button>
+
+      {open && (
+        <div
+          onClick={() => setOpen(false)}
+          style={{
+            position: 'fixed', inset: 0,
+            background: 'rgba(0,0,0,.55)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 9999,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: '1rem',
+              padding: '1.75rem',
+              maxWidth: '340px', width: '90%',
+              boxShadow: '0 20px 60px rgba(0,0,0,.3)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)', margin: 0, display: 'flex', alignItems: 'center', gap: '.4rem' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#229ED9">
+                  <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.941z"/>
+                </svg>
+                Connect to Telegram
+              </h3>
+              <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: 'var(--text-muted)', lineHeight: 1 }}>✕</button>
+            </div>
+
+            {qrUrl && (
+              <a href={link} target="_blank" rel="noopener noreferrer" style={{ display: 'block', textAlign: 'center', marginBottom: '1rem' }}>
+                <img src={qrUrl} alt="Telegram QR" width={180} height={180}
+                  style={{ borderRadius: '.5rem', border: '3px solid #229ED933', display: 'inline-block' }} />
+              </a>
+            )}
+
+            <div style={{
+              background: 'var(--bg)', border: '1px solid var(--border)',
+              borderRadius: '.5rem', padding: '.85rem', fontSize: '.82rem',
+              lineHeight: 1.9, color: 'var(--text-muted)', marginBottom: '1rem',
+            }}>
+              <strong style={{ color: 'var(--text)', display: 'block', marginBottom: '.3rem' }}>Steps for staff:</strong>
+              1️⃣ Scan QR or open bot link<br/>
+              2️⃣ Type your depot command:<br/>
+              <div style={{ display: 'flex', gap: '.4rem', margin: '.4rem 0' }}>
+                {['ASR','FZR','JUC'].map(d => (
+                  <code key={d} style={{ padding: '.15rem .5rem', borderRadius: '.3rem', background: '#229ED9', color: '#fff', fontWeight: 700, fontSize: '.82rem' }}>/{d}</code>
+                ))}
+              </div>
+              3️⃣ Type your name → ✅ Done!
+            </div>
+
+            <div style={{ display: 'flex', gap: '.5rem' }}>
+              <a href={link} target="_blank" rel="noopener noreferrer"
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.35rem',
+                  padding: '.55rem', borderRadius: '.5rem', background: '#229ED9', color: '#fff',
+                  textDecoration: 'none', fontWeight: 700, fontSize: '.85rem' }}>
+                ✈️ Open Bot
+              </a>
+              <button
+                onClick={() => navigator.clipboard.writeText(link).catch(() => {})}
+                style={{ flex: 1, padding: '.55rem', borderRadius: '.5rem', border: '1.5px solid var(--border)',
+                  background: 'transparent', color: 'var(--text)', fontWeight: 600, fontSize: '.85rem', cursor: 'pointer' }}>
+                📋 Copy Link
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
