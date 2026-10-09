@@ -187,6 +187,8 @@ function UploadCard({
   accept,
   successMsg,
   findSheet,
+  depot,
+  showReplaceOption,
 }: {
   title: string
   description: string
@@ -194,10 +196,13 @@ function UploadCard({
   accept: string
   successMsg?: (data: any) => string
   findSheet: (names: string[]) => string
+  depot?: string
+  showReplaceOption?: boolean
 }) {
   const [state, setState] = useState<UploadState>('idle')
   const [message, setMessage] = useState('')
   const [file, setFile] = useState<File | null>(null)
+  const [replaceDepot, setReplaceDepot] = useState(false)
 
   async function handleUpload() {
     if (!file) return
@@ -216,7 +221,7 @@ function UploadCard({
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rows, sheetName }),
+        body: JSON.stringify({ rows, sheetName, depot, replaceDepot }),
       })
       const rawText = await res.text()
       let data: any = {}
@@ -263,6 +268,18 @@ function UploadCard({
             onChange={e => { setFile(e.target.files?.[0] || null); setState('idle'); setMessage('') }}
           />
         </label>
+
+        {showReplaceOption && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: '.4rem', fontSize: '.82rem', color: 'var(--text-muted)', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={replaceDepot}
+              onChange={e => setReplaceDepot(e.target.checked)}
+              style={{ accentColor: 'var(--fail)', width: 14, height: 14 }}
+            />
+            Delete existing {depot} data before import
+          </label>
+        )}
 
         <button
           onClick={handleUpload}
@@ -509,6 +526,8 @@ export default function SettingsPage() {
             accept=".xlsx,.xls,.xlsm"
             successMsg={(d) => `${d.inserted} entries imported from sheet "${d.sheetUsed}". ${d.skipped} rows skipped.`}
             findSheet={(names) => names.find(n => n.includes('ASR') || n.includes('CIA') || n.includes('2026')) || names[0]}
+            depot="ASR"
+            showReplaceOption={true}
           />
         </section>
 
