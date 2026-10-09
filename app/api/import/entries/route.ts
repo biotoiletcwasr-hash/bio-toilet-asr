@@ -6,9 +6,11 @@ function parseExcelDate(val: any): string | null {
   // JavaScript Date object from xlsx cellDates:true + raw:true
   if (val instanceof Date) {
     if (isNaN(val.getTime())) return null
-    const y = val.getUTCFullYear()
-    const m = String(val.getUTCMonth() + 1).padStart(2, '0')
-    const d = String(val.getUTCDate()).padStart(2, '0')
+    // Use local time (not UTC) - xlsx cellDates returns local midnight
+    // UTC methods give day-1 in IST (+5:30)
+    const y = val.getFullYear()
+    const m = String(val.getMonth() + 1).padStart(2, '0')
+    const d = String(val.getDate()).padStart(2, '0')
     return `${y}-${m}-${d}`
   }
   if (typeof val === 'string') {
