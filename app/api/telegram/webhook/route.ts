@@ -171,6 +171,8 @@ async function handleMessage(msg: {
     await handleDue(chatId, user)
   } else if (text === '/overdue') {
     await handleOverdue(chatId, user)
+  } else if (text === '/resample') {
+    await handleResample(chatId, user)
   } else if (text === '/pending') {
     await handlePending(chatId, user)
   } else if (text === '/add') {
@@ -674,14 +676,14 @@ async function handleCoach(chatId: string, user: Record<string, unknown>, text: 
     return
   }
 
-  const isAdmin = (user.role === 'admin') || (chatId === adminChatId())
-  const depot   = isAdmin ? null : (user.depot as string)
+  // Always filter by the user's registered depot so ASR users only see ASR data
+  const depot = user.depot as string
 
   const r = await db.execute({
     sql: `SELECT * FROM bio_test_entries
-          WHERE coach_no = ? ${depot ? 'AND UPPER(depot) = UPPER(?)' : ''}
+          WHERE coach_no = ? AND UPPER(depot) = UPPER(?)
           ORDER BY date DESC LIMIT 6`,
-    args: depot ? [coachNo, depot] : [coachNo],
+    args: [coachNo, depot],
   })
 
   if (!r.rows.length) {
@@ -707,6 +709,88 @@ async function handleCoach(chatId: string, user: Record<string, unknown>, text: 
     const em = re === 'PASS' ? '✅' : re === 'FAIL' ? '❌' : '⏳'
     msg += `${em} ${fmtDate(row.date as string)} | ${row.train_no} | pH:${row.ph ?? '—'} COD:${row.cod ?? '—'}\n`
   }
+  await send(chatId, msg)
+}
+
+// ── Command: /resample ──────────────────────────────────────────────────────
+// Shows FAIL coaches where 30-day re-sampling window has passed or is due within 7 days
+async function handleResample(chatId: string, user: Record<string, unknown>) {
+  const depot = (user.depot as string | null) || 'ASR'
+
+  // SQLite CASE to normalise YYYY-DD-MM → YYYY-MM-DD for sorting/comparison
+  const normExpr = (col: string) =>
+    `CASE WHEN CAST(SUBSTR(${col},6,2) AS INTEGER) > 12
+          THEN SUBSTR(${col},1,4)||'-'||SUBSTR(${col},9,2)||'-'||SUBSTR(${col},6,2)
+          ELSE ${col} END`
+
+  // FAIL coaches with no second test, latest entry per coach, filtered by depot
+  const r = await db.execute({
+    sql: `SELECT e.coach_no, e.train_no, e.code, e.bio_tank_no,
+                 ${normExpr('e.date')} AS norm_date
+          FROM bio_test_entries e
+          WHERE e.result = 'FAIL'
+            AND (e.second_test_result IS NULL OR UPPER(TRIM(e.second_test_result)) != 'NA')
+            AND (e.second_test_date  IS NULL OR e.second_test_date = '')
+            AND (UPPER(e.depot) = UPPER(?) OR e.depot IS NULL)
+            AND ${normExpr('e.date')} = (
+              SELECT MAX(${normExpr('e2.date')})
+              FROM bio_test_entries e2
+              WHERE UPPER(e2.coach_no) = UPPER(e.coach_no)
+                AND (UPPER(e2.depot) = UPPER(?) OR e2.depot IS NULL)
+            )
+          ORDER BY norm_date ASC`,
+    args: [depot, depot],
+  })
+
+  const today = new Date()
+  today.setUTCHours(0, 0, 0, 0)
+  const in7Days = new Date(today)
+  in7Days.setUTCDate(today.getUTCDate() + 7)
+
+  const overdue: { coach_no: string; train_no: unknown; test_date: string; due_date: string }[] = []
+  const upcoming: typeof overdue = []
+
+  for (const row of r.rows) {
+    const nd = row.norm_date as string
+    const testDate = new Date(`${nd}T00:00:00Z`)
+    if (isNaN(testDate.getTime())) continue
+    const dueDate = new Date(testDate)
+    dueDate.setUTCDate(dueDate.getUTCDate() + 30)
+    const entry = {
+      coach_no:  row.coach_no as string,
+      train_no:  row.train_no,
+      test_date: nd,
+      due_date:  dueDate.toISOString().split('T')[0],
+    }
+    if (today >= dueDate) overdue.push(entry)
+    else if (dueDate <= in7Days) upcoming.push(entry)
+  }
+
+  if (!overdue.length && !upcoming.length) {
+    await send(chatId, `✅ <b>Re-Sampling Alert — ${depot}</b>\n\nKoi coach pending nahi! Sab clear hai. 👍`)
+    return
+  }
+
+  let msg = `🚨 <b>Re-Sampling Alert — ${depot}</b>\n`
+
+  if (overdue.length) {
+    msg += `\n🔴 <b>Window Pass Ho Gayi — Abhi Re-Sample Karo</b> (${overdue.length})\n`
+    msg += `━━━━━━━━━━━━━━━━\n`
+    for (const c of overdue) {
+      msg += `❌ <b>${c.coach_no}</b> | Train: ${c.train_no || '—'}\n`
+      msg += `   Tested: ${fmtDate(c.test_date)} | Due: ${fmtDate(c.due_date)}\n`
+    }
+  }
+
+  if (upcoming.length) {
+    msg += `\n🟡 <b>7 Dino Mein Due Hain</b> (${upcoming.length})\n`
+    msg += `━━━━━━━━━━━━━━━━\n`
+    for (const c of upcoming) {
+      msg += `⚠️ <b>${c.coach_no}</b> | Train: ${c.train_no || '—'}\n`
+      msg += `   Tested: ${fmtDate(c.test_date)} | Due: ${fmtDate(c.due_date)}\n`
+    }
+  }
+
   await send(chatId, msg)
 }
 
@@ -845,6 +929,7 @@ async function handleHelp(chatId: string, user: Record<string, unknown>) {
     `/pending — Entries with PENDING result\n\n` +
     `🔍 <b>Coach Status</b>\n` +
     `/coach 258840 — Coach status + history\n` +
+    `/resample — 30-day re-sampling alert (FAIL coaches)\n` +
     `/due — Coaches due in next 15 days\n` +
     `/overdue — Overdue coaches (&gt;90 days)\n\n` +
     `🏭 <b>Depot Summary</b>\n` +
