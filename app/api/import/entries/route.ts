@@ -79,10 +79,10 @@ export async function POST(req: NextRequest) {
     const depot: string = (body.depot || '').toUpperCase()
     const replaceDepot: boolean = body.replaceDepot === true
 
-    // If replace mode: delete existing entries for this depot first
+    // If replace mode: delete existing entries for this depot + untagged NULL entries (old imports)
     if (replaceDepot && depot) {
       await db.execute({
-        sql: `DELETE FROM bio_test_entries WHERE UPPER(depot) = ?`,
+        sql: `DELETE FROM bio_test_entries WHERE UPPER(depot) = ? OR depot IS NULL`,
         args: [depot],
       })
     }
