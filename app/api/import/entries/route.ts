@@ -103,8 +103,8 @@ export async function POST(req: NextRequest) {
     const statements: { sql: string; args: any[] }[] = []
     let skipped = 0
 
-    // Data starts at row index 3 (rows 0-2 are headers/metadata)
-    for (let i = 3; i < rows.length; i++) {
+    // Data starts at row index 2 (rows 0-1 are title/headers, row 2 = first data)
+    for (let i = 2; i < rows.length; i++) {
       const row = rows[i]
       if (!row || row[0] == null) continue
 
