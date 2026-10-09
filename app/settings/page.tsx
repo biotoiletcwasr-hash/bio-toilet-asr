@@ -215,7 +215,7 @@ function UploadCard({
       const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: true })
       const sheetName = findSheet(workbook.SheetNames)
       const ws = workbook.Sheets[sheetName]
-      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, cellDates: true })
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true })
 
       // Send extracted rows as JSON (tiny payload, no file upload)
       const res = await fetch(endpoint, {
