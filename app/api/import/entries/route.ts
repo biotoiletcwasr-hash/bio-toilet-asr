@@ -2,7 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db, initDB } from '@/lib/db'
 
 function parseExcelDate(val: any): string | null {
-  if (!val) return null
+  if (!val && val !== 0) return null
+  // JavaScript Date object from xlsx cellDates:true + raw:true
+  if (val instanceof Date) {
+    if (isNaN(val.getTime())) return null
+    const y = val.getUTCFullYear()
+    const m = String(val.getUTCMonth() + 1).padStart(2, '0')
+    const d = String(val.getUTCDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+  }
   if (typeof val === 'string') {
     const s = val.trim()
     if (!s) return null
@@ -99,7 +107,7 @@ export async function POST(req: NextRequest) {
       if (!row || row[0] == null) continue
 
       const coachNo = row[3] != null ? String(row[3]).trim() : ''
-      if (!coachNo) { skipped++; continue }
+      // Note: allow empty coachNo - don't skip, import as blank
 
       const dateStr = parseExcelDate(row[1])
       if (!dateStr || dateStr === 'NA') { skipped++; continue }
