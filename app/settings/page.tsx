@@ -215,7 +215,19 @@ function UploadCard({
       const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: true })
       const sheetName = findSheet(workbook.SheetNames)
       const ws = workbook.Sheets[sheetName]
-      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true })
+      const rawRows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true })
+      // Convert Date objects to local YYYY-MM-DD before JSON.stringify (UTC would give day-1 in IST)
+      const rows = (rawRows as any[][]).map(row =>
+        row.map(cell => {
+          if (cell instanceof Date) {
+            const y = cell.getFullYear()
+            const m = String(cell.getMonth() + 1).padStart(2, '0')
+            const d = String(cell.getDate()).padStart(2, '0')
+            return `${y}-${m}-${d}`
+          }
+          return cell
+        })
+      )
 
       // Send extracted rows as JSON (tiny payload, no file upload)
       const res = await fetch(endpoint, {
