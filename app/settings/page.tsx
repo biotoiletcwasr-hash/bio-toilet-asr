@@ -216,13 +216,18 @@ function UploadCard({
       const sheetName = findSheet(workbook.SheetNames)
       const ws = workbook.Sheets[sheetName]
       const rawRows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true })
-      // Convert Date objects to local YYYY-MM-DD before JSON.stringify (UTC would give day-1 in IST)
+      // Convert Date objects to YYYY-MM-DD strings.
+      // SheetJS cellDates has a floating-point precision issue: serial 46302 (Oct 7)
+      // becomes ~10 seconds before midnight UTC, so both getDate() and getUTCDate() return 6.
+      // Fix: round to nearest UTC day first, then extract UTC date components.
       const rows = (rawRows as any[][]).map(row =>
         row.map(cell => {
           if (cell instanceof Date) {
-            const y = cell.getFullYear()
-            const m = String(cell.getMonth() + 1).padStart(2, '0')
-            const d = String(cell.getDate()).padStart(2, '0')
+            const roundedMs = Math.round(cell.getTime() / 86400000) * 86400000
+            const rounded = new Date(roundedMs)
+            const y = rounded.getUTCFullYear()
+            const m = String(rounded.getUTCMonth() + 1).padStart(2, '0')
+            const d = String(rounded.getUTCDate()).padStart(2, '0')
             return `${y}-${m}-${d}`
           }
           return cell
